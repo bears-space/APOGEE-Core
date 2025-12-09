@@ -7,6 +7,10 @@ ___
 	- AP = Accesspoint
 	- STA = Station
 	- APSTA = Dual mode
+- Webserver
+	- Handles OTA upload
+- Debugging
+	- Wireless debugging: gcc / terminal
 
 ### Peripherals:
 - WS2812b
