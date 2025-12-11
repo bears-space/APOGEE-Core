@@ -10,6 +10,7 @@ endif()
 idf_component_register(
     SRCS
         "main.c"
+        "http_server.c"
         "ota_http.c"
     INCLUDE_DIRS
         "."
