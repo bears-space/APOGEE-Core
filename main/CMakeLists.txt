@@ -15,6 +15,8 @@ idf_component_register(
         "vigilant.c"
     INCLUDE_DIRS
         "."
+    EMBED_FILES 
+        "static/update.html"
     REQUIRES
         ${requires}
         app_update

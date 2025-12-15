@@ -9,6 +9,6 @@ void app_main(void)
     vigilant_init();
 
     while (1) {
-        sleep(5);
+        sleep(1);
     }
 }

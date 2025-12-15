@@ -242,7 +242,7 @@ static const httpd_uri_t hello = {
     .uri       = "/hello",
     .method    = HTTP_GET,
     .handler   = hello_get_handler,
-    .user_ctx  = "Hello World! This is the updated OTA version!:)"
+    .user_ctx  = "Hello World! This is the updated OTA version! :)"
 };
 
 static esp_err_t echo_post_handler(httpd_req_t *req)

@@ -1,5 +1,3 @@
-// ota_http.c
-
 #include <string.h>
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -9,7 +7,28 @@
 
 static const char *TAG_OTA = "ota_http";
 
+extern const unsigned char update_html_start[] asm("_binary_update_html_start"); // HTML Update File Start
+extern const unsigned char update_html_end[]   asm("_binary_update_html_end");  // HTML Update File End
+
 #define OTA_RECV_BUF_SIZE 1024
+
+// ========== GET /update ==========
+
+static esp_err_t ota_get_handler(httpd_req_t *req)
+{
+    const size_t html_len = update_html_end - update_html_start;
+
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+
+    esp_err_t err = httpd_resp_send(req, (const char *)update_html_start, html_len);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG_OTA, "Failed to send update.html (%s)", esp_err_to_name(err));
+    }
+    return err;
+}
+
+// ========== POST /update ==========
 
 static esp_err_t ota_post_handler(httpd_req_t *req)
 {
@@ -45,7 +64,7 @@ static esp_err_t ota_post_handler(httpd_req_t *req)
         if (received <= 0) {
             if (received == HTTPD_SOCK_ERR_TIMEOUT) {
                 ESP_LOGW(TAG_OTA, "Socket timeout, retrying...");
-                continue; // No decrement of 'remaining', nochmal versuchen
+                continue; // nochmal versuchen
             }
             ESP_LOGE(TAG_OTA, "httpd_req_recv failed (%d)", received);
             esp_ota_end(ota_handle);
@@ -85,7 +104,6 @@ static esp_err_t ota_post_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "text/plain");
     httpd_resp_sendstr(req, "OK, rebooting");
 
-    // Kurz warten, damit Antwort rausgeht
     vTaskDelay(pdMS_TO_TICKS(1000));
     esp_restart();
 
@@ -94,18 +112,38 @@ static esp_err_t ota_post_handler(httpd_req_t *req)
 
 esp_err_t ota_http_register_handlers(httpd_handle_t server)
 {
-    static const httpd_uri_t ota_update_uri = {
+    // GET /update -> HTML-Seite
+    static const httpd_uri_t ota_update_get_uri = {
+        .uri       = "/update",
+        .method    = HTTP_GET,
+        .handler   = ota_get_handler,
+        .user_ctx  = NULL,
+    };
+
+    // POST /update -> Firmware-Upload
+    static const httpd_uri_t ota_update_post_uri = {
         .uri       = "/update",
         .method    = HTTP_POST,
         .handler   = ota_post_handler,
         .user_ctx  = NULL,
     };
 
-    esp_err_t err = httpd_register_uri_handler(server, &ota_update_uri);
+    esp_err_t err;
+
+    err = httpd_register_uri_handler(server, &ota_update_get_uri);
     if (err == ESP_OK) {
-        ESP_LOGI(TAG_OTA, "Registered OTA HTTP handler at /update");
+        ESP_LOGI(TAG_OTA, "Registered OTA HTTP GET handler at /update");
     } else {
-        ESP_LOGE(TAG_OTA, "Failed to register OTA handler (%s)", esp_err_to_name(err));
+        ESP_LOGE(TAG_OTA, "Failed to register OTA GET handler (%s)", esp_err_to_name(err));
+        return err;
     }
+
+    err = httpd_register_uri_handler(server, &ota_update_post_uri);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG_OTA, "Registered OTA HTTP POST handler at /update");
+    } else {
+        ESP_LOGE(TAG_OTA, "Failed to register OTA POST handler (%s)", esp_err_to_name(err));
+    }
+
     return err;
 }
