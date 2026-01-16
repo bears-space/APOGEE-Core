@@ -16,17 +16,7 @@ void app_main(void)
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
 
     while (1) {
-        
-        ESP_ERROR_CHECK(status_led_set_rgb(255, 0, 0));
-        vTaskDelay(pdMS_TO_TICKS(300));
-
-        ESP_ERROR_CHECK(status_led_set_rgb(0, 255, 0));
-        vTaskDelay(pdMS_TO_TICKS(300));
-
-        ESP_ERROR_CHECK(status_led_set_rgb(0, 0, 255));
-        vTaskDelay(pdMS_TO_TICKS(300));
-
-        ESP_ERROR_CHECK(status_led_set_rgb(255, 255, 255));
+        ESP_ERROR_CHECK(status_led_set_rgb(100, 100, 100));
         vTaskDelay(pdMS_TO_TICKS(300));
 
         ESP_ERROR_CHECK(status_led_off());
