@@ -28,33 +28,15 @@ static const char *TAG = "ve_recovery";
 // ---- OTA ----
 #define OTA_BUF_SIZE 2048
 
-static const char *INDEX_HTML =
-"<!doctype html><html><head><meta charset='utf-8'/>"
-"<meta name='viewport' content='width=device-width,initial-scale=1'/>"
-"<title>Vigilant Recovery</title></head><body style='font-family: sans-serif;'>"
-"<h2>Vigilant Engine – Recovery</h2>"
-"<p>Upload <b>main.bin</b> to <code>ota_0</code>.</p>"
-"<input id='f' type='file' />"
-"<button onclick='u()'>Upload & Boot</button>"
-"<button onclick='c()'>Boot instead</button>"
-"<pre id='o'></pre>"
-"<script>"
-"async function u(){"
-"  const f=document.getElementById('f').files[0];"
-"  if(!f){o('no file');return;}"
-"  o('uploading '+f.name+' ('+f.size+' bytes)…');"
-"  const buf=await f.arrayBuffer();"
-"  const r=await fetch('/update',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});"
-"  o('server: '+(await r.text()));"
-"}"
-"function o(t){document.getElementById('o').textContent=t;}"
-"function c(){fetch('/boot',{method:'POST'}).then(r=>r.text()).then(t=>o('server: '+t));}"
-"</script></body></html>";
+extern const unsigned char index_html_start[] asm("_binary_index_html_start");
+extern const unsigned char index_html_end[]   asm("_binary_index_html_end");
 
 static esp_err_t index_get_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
-    return httpd_resp_send(req, INDEX_HTML, HTTPD_RESP_USE_STRLEN);
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    
+    return httpd_resp_send(req, (const char *)index_html_start, index_html_end - index_html_start);
 }
 
 static const esp_partition_t *find_ota0_partition(void)
