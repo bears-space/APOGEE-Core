@@ -35,7 +35,8 @@ static const char *INDEX_HTML =
 "<h2>Vigilant Engine – Recovery</h2>"
 "<p>Upload <b>main.bin</b> to <code>ota_0</code>.</p>"
 "<input id='f' type='file' />"
-"<button onclick='u()'>Upload</button>"
+"<button onclick='u()'>Upload & Boot</button>"
+"<button onclick='c()'>Boot instead</button>"
 "<pre id='o'></pre>"
 "<script>"
 "async function u(){"
@@ -47,6 +48,7 @@ static const char *INDEX_HTML =
 "  o('server: '+(await r.text()));"
 "}"
 "function o(t){document.getElementById('o').textContent=t;}"
+"function c(){fetch('/boot',{method:'POST'}).then(r=>r.text()).then(t=>o('server: '+t));}"
 "</script></body></html>";
 
 static esp_err_t index_get_handler(httpd_req_t *req)
@@ -64,6 +66,32 @@ static const esp_partition_t *find_ota0_partition(void)
         NULL
     );
     return p;
+}
+
+static esp_err_t boot_post_handler(httpd_req_t *req)
+{
+    const esp_partition_t *ota0 = find_ota0_partition();
+    if (!ota0) {
+        ESP_LOGE(TAG, "ota_0 partition not found");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "ota_0 not found");
+        return ESP_FAIL;
+    }
+
+    esp_err_t err = esp_ota_set_boot_partition(ota0);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed: %s", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "set_boot_partition failed");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Boot partition set to ota_0. Rebooting…");
+
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_sendstr(req, "OK. Rebooting to ota_0...\n");
+
+    vTaskDelay(pdMS_TO_TICKS(250));
+    esp_restart();
+    return ESP_OK;
 }
 
 static esp_err_t ota_post_handler(httpd_req_t *req)
@@ -196,8 +224,16 @@ static httpd_handle_t start_http_server(void)
         .user_ctx = NULL
     };
 
+    httpd_uri_t boot_uri = {
+        .uri      = "/boot",
+        .method   = HTTP_POST,
+        .handler  = boot_post_handler,
+        .user_ctx = NULL
+    };
+
     httpd_register_uri_handler(server, &index_uri);
     httpd_register_uri_handler(server, &update_uri);
+    httpd_register_uri_handler(server, &boot_uri);
 
     ESP_LOGI(TAG, "HTTP server started");
     return server;
