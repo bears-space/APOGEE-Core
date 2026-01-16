@@ -387,7 +387,7 @@
       function showRecovery() {
         document.getElementById("overlay").classList.add("active");
 
-        fetch("/reboot-recovery", { method: "POST" })
+        fetch("/rebootfactory", { method: "GET" })
           .then(() => log("Rebooting to recovery mode..."))
           .catch((e) => log("Warning: " + e.message));
       }
