@@ -1,0 +1,3 @@
+[submodule "submodules/wuerth_sensors_sdk_esp32"]
+	path = submodules/wuerth_sensors_sdk_esp32
+	url = git@github.com:bears-space/Sensors-SDK_ESP32.git
