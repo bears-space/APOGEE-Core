@@ -13,7 +13,7 @@ your board's pin assignments before wiring. SCL defaults to GPIO 2 for this
 application to avoid the existing RGB status LED's GPIO 0 assignment.
 
 Under **GY-BNO055 Configuration**, select address `0x28` (ADR low) or `0x29`
-(ADR high), and the output interval (default 100 ms). The application enables
+(ADR high), and the output interval (default 10 ms, targeting 100 Hz). The application enables
 the existing Vigilant I2C bus automatically.
 
 `main/main.c` prints one CSV sample per line, without labels or timestamps:
@@ -28,9 +28,16 @@ is no longer started. No quaternion, Euler angle, or other fusion output is used
 
 With the initialized units, acceleration has 100 LSB per m/s², magnetic field
 has 16 LSB per µT, and angular velocity has 16 LSB per degree/s. The driver
-prints the original integer counts. Sensor defaults are ±4 g / 62.5 Hz for
-acceleration, 10 Hz magnetometer output, and ±2000 degrees/s / 32 Hz for the
-gyroscope; faster polling can repeat samples.
+prints the original integer counts. Acceleration retains the ±4 g range and
+62.5 Hz filter bandwidth; the gyroscope retains ±2000 degrees/s and 32 Hz
+filter bandwidth. These bandwidths are not the host polling rate. The
+magnetometer is configured for 30 Hz output in the regular preset and normal
+power mode, so magnetic values repeat between updates in the 100 Hz CSV stream.
+
+The polling loop uses a fixed schedule instead of adding a delay after every
+read. The actual rate depends on FreeRTOS tick resolution, I2C clock stretching,
+and console throughput; missed deadlines are skipped. Existing `sdkconfig`
+files retain their saved interval: set it to 10 ms in `menuconfig` when upgrading.
 
 For reuse, call `bno055_init(bus, address, &device)` with an existing synchronous
 I2C master bus, then `bno055_read_raw(device, &sample)`. Remove the device with

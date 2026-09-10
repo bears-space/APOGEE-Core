@@ -6,6 +6,7 @@
 #define BNO055_REG_CHIP_ID 0x00
 #define BNO055_REG_PAGE_ID 0x07
 #define BNO055_REG_ACC_DATA 0x08
+#define BNO055_REG_MAG_CONFIG 0x09  // Page 1.
 #define BNO055_REG_UNIT_SEL 0x3B
 #define BNO055_REG_OPR_MODE 0x3D
 #define BNO055_REG_PWR_MODE 0x3E
@@ -58,6 +59,13 @@ static esp_err_t configure(i2c_master_dev_handle_t device) {
     if (err != ESP_OK) return err;
     delay_ms(10);
     err = write_reg(device, BNO055_REG_UNIT_SEL, 0);
+    if (err != ESP_OK) return err;
+    err = write_reg(device, BNO055_REG_PAGE_ID, 1);
+    if (err != ESP_OK) return err;
+    // Normal power, regular preset, 30 Hz magnetometer output.
+    err = write_reg(device, BNO055_REG_MAG_CONFIG, 0x0F);
+    if (err != ESP_OK) return err;
+    err = write_reg(device, BNO055_REG_PAGE_ID, 0);
     if (err != ESP_OK) return err;
     err = write_reg(device, BNO055_REG_OPR_MODE, BNO055_MODE_AMG);
     if (err != ESP_OK) return err;
