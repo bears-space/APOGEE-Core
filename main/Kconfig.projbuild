@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 menu "GY-BNO055 Configuration"
     config BNO055_RAW_OUTPUT
         bool
@@ -55,6 +56,8 @@ menu "Example Configuration"
 
 endmenu
 
+=======
+>>>>>>> main
 menu "Vigilant Engine Configuration: LEDs"
     config VE_ENABLE_STATUS_LED
         bool "Enable Status LED"
@@ -129,6 +132,8 @@ menu "Vigilant Engine Configuration: LEDs"
 endmenu
 
 menu "Vigilant Engine Configuration: WiFi"
+    depends on SOC_WIFI_SUPPORTED
+
     # --- Wifi Settings ---
     config VE_STA_SSID
         string "WiFi STA SSID"
@@ -156,6 +161,8 @@ menu "Vigilant Engine Configuration: WiFi"
         help
             The password for the WiFi Access Point (AP) mode of the Vigilant Engine.
 endmenu
+
+rsource "../vigilant-engine-recovery/Kconfig.network"
 
 menu "Vigilant Engine Configuration: I2C"
     config VE_ENABLE_I2C
@@ -187,4 +194,12 @@ menu "Vigilant Engine Configuration: I2C"
         depends on VE_ENABLE_I2C
         help
             The frequency of the I2C communication in Hertz. Common values are 100000 (100 kHz) for standard mode and 400000 (400 kHz) for fast mode.
+endmenu
+
+menu "Vigilant Engine Configuration: Frontend"
+    config VE_DISABLE_FRONTEND
+        bool "Disable Frontend Embedded HTML"
+        default n
+        help
+            Enable this option to disable the frontend functionality in Vigilant Engine. This is useful for headless operation or when the frontend is not needed. Note: this only removes the html embedded in the firmware, the api routes are still available.
 endmenu

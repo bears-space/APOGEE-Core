@@ -23,28 +23,6 @@ The network mode of the esp node.
 - `NW_MODE_AP` AP mode
 - `NW_MODE_STA` STA mode
 ___
-## Menuconfig Settings (Example / HTTP)
-___
-#### `EXAMPLE_BASIC_AUTH`, **bool**
-Enable HTTP Basic Authentication for the web server. When enabled, clients must provide a username and password in the HTTP headers before accessing protected resources.
-
-**default**: `0`
-___
-#### `EXAMPLE_BASIC_AUTH_USERNAME`, **string**
-The username used for HTTP Basic Authentication. This setting is only available when `EXAMPLE_BASIC_AUTH` is enabled.
-
-**default**: `"ESP32"`
-___
-#### `EXAMPLE_BASIC_AUTH_PASSWORD`, **string**
-The password used for HTTP Basic Authentication. This setting is only available when `EXAMPLE_BASIC_AUTH` is enabled.
-
-**default**: `"ESP32Webserver"`
-___
-#### `EXAMPLE_ENABLE_SSE_HANDLER`, **bool**
-Enable Server-Sent Events (SSE) support so the server can push real-time updates to connected clients over HTTP.
-
-**default**: `0`
-___
 ## Menuconfig Settings (Status LED)
 ___
 #### `VE_INVERT_STATUS_LED`, **bool**
@@ -126,3 +104,60 @@ The password for the WiFi Access Point (AP) mode of the Vigilant Engine.
 
 **default**: `"starstreak"`
 ___
+## Menuconfig Settings (Recovery)
+___
+#### `VE_RECOVERY_NETWORK_MODE`, **choice**
+Select the recovery firmware network mode.
+###### Options:
+- `VE_RECOVERY_NETWORK_MODE_AP` Creates a recovery access point
+- `VE_RECOVERY_NETWORK_MODE_STA` Connects recovery to an existing WiFi network
+- `VE_RECOVERY_NETWORK_MODE_APSTA` Enables both interfaces
+
+**default**: `VE_RECOVERY_NETWORK_MODE_AP`
+___
+#### `VE_RECOVERY_STA_SSID`, **string**
+The WiFi network the recovery firmware joins in `STA` or `AP+STA` mode.
+
+**default**: `"starstreak"`
+___
+#### `VE_RECOVERY_STA_PASSWORD`, **string**
+The password for the recovery station network. Leave it empty for an open network.
+
+**default**: `"starstreak"`
+___
+#### `VE_RECOVERY_AP_SSID_PREFIX`, **string**
+The recovery access point prefix. The firmware appends the final two MAC address bytes.
+
+**default**: `"VE-Recovery-"`
+___
+#### `VE_RECOVERY_AP_PASSWORD`, **string**
+The recovery access point password. It must be empty for an open network or contain 8 to 63
+characters.
+
+**default**: `"starstreak"`
+___
+#### `VE_RECOVERY_AP_CHANNEL`, **int**
+The WiFi channel used by the recovery access point.
+
+**range**: `1` to `14`
+
+**default**: `6`
+___
+#### `VE_RECOVERY_MAX_CONN`, **int**
+The maximum number of stations that can connect to the recovery access point simultaneously.
+
+**range**: `1` to `15`
+
+**default**: `2`
+___
+#### `VE_RECOVERY_CONNECTION_TIMEOUT_SECONDS`, **int**
+The number of seconds recovery waits for its station interface to connect before continuing.
+
+**range**: `1` to `3600`
+
+**default**: `30`
+___
+## Vigilant Engine Settings
+___
+#### `VE_DISABLE_FRONTEND`, **bool**
+Option to disable the frontend embed for the main app, to save flash space. API routes will still be accessible.
