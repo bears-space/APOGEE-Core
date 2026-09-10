@@ -2,5 +2,5 @@ idf_component_register(
     SRCS
         "main.c"
     INCLUDE_DIRS "."
-    REQUIRES vigilant_engine bno055
+    REQUIRES vigilant_engine bno055 telemetry
 )

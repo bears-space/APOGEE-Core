@@ -156,7 +156,6 @@ set(vigilant_engine_srcs
     "src/ota_http.c"
     "src/vigilant.c"
     "src/status_led.c"
-    "src/telemetry.c"
     "src/websocket.c"
 )
 
