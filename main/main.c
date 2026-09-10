@@ -24,39 +24,44 @@ esp_err_t telem_init() {
     return ESP_OK;  
 }
 
+void IMU_Gather_Task(void *pvParameters)
+{
+    while (1) {
+        ESP_LOGI(TAG, "IMU Task started\n");
+
+        i2c_master_bus_handle_t bus = NULL;
+        ESP_ERROR_CHECK(i2c_master_get_bus_handle(I2C_NUM_0, &bus));
+        i2c_master_dev_handle_t sensor = NULL;
+        ESP_ERROR_CHECK(bno055_init(bus, CONFIG_BNO055_I2C_ADDRESS, &sensor));
+
+        const TickType_t period =
+            (CONFIG_BNO055_SAMPLE_PERIOD_MS * configTICK_RATE_HZ + 999) / 1000;
+        TickType_t last_wake = xTaskGetTickCount();
+        while (true) {
+            bno055_raw_data_t raw;
+            esp_err_t err = bno055_read_raw(sensor, &raw);
+            if (err == ESP_OK) {
+                // CSV: ax,ay,az,mx,my,mz,gx,gy,gz (signed register values).
+                printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n", raw.accel.x, raw.accel.y,
+                    raw.accel.z, raw.mag.x, raw.mag.y, raw.mag.z, raw.gyro.x,
+                    raw.gyro.y, raw.gyro.z);
+            } else {
+                ESP_LOGE(TAG, "BNO055 read failed: %s", esp_err_to_name(err));
+            }
+            if (xTaskDelayUntil(&last_wake, period) == pdFALSE) {
+                // Skip missed deadlines after slow I2C/console operations instead
+                // of emitting a burst of catch-up reads.
+                last_wake = xTaskGetTickCount();
+                vTaskDelay(pdMS_TO_TICKS(1));
+            }
+        }
+    }
+}
+
 void app_main(void) {
     VigilantConfig VgConfig = {.unique_component_name = "Vigilant ESP Test",
                                .network_mode = NW_MODE_APSTA};
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
-
-    /*
-    i2c_master_bus_handle_t bus = NULL;
-    ESP_ERROR_CHECK(i2c_master_get_bus_handle(I2C_NUM_0, &bus));
-    i2c_master_dev_handle_t sensor = NULL;
-    ESP_ERROR_CHECK(bno055_init(bus, CONFIG_BNO055_I2C_ADDRESS, &sensor));
-
-    const TickType_t period =
-        (CONFIG_BNO055_SAMPLE_PERIOD_MS * configTICK_RATE_HZ + 999) / 1000;
-    TickType_t last_wake = xTaskGetTickCount();
-    while (true) {
-        bno055_raw_data_t raw;
-        esp_err_t err = bno055_read_raw(sensor, &raw);
-        if (err == ESP_OK) {
-            // CSV: ax,ay,az,mx,my,mz,gx,gy,gz (signed register values).
-            printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n", raw.accel.x, raw.accel.y,
-                   raw.accel.z, raw.mag.x, raw.mag.y, raw.mag.z, raw.gyro.x,
-                   raw.gyro.y, raw.gyro.z);
-        } else {
-            ESP_LOGE(TAG, "BNO055 read failed: %s", esp_err_to_name(err));
-        }
-        if (xTaskDelayUntil(&last_wake, period) == pdFALSE) {
-            // Skip missed deadlines after slow I2C/console operations instead
-            // of emitting a burst of catch-up reads.
-            last_wake = xTaskGetTickCount();
-            vTaskDelay(1);
-        }
-    }
-    */
 
     // Initialize the telemetry pipeline after all other components are set up
     err = telem_init();
@@ -75,4 +80,15 @@ void app_main(void) {
         ESP_LOGE(TAG, "Failed to register IMU channel: %s", esp_err_to_name(err));
         return;
     }
+
+    sensor_channel_t* imu_channel = NULL;
+    err = sensor_registry_find(get_sensor_registry(), IMU_channel_config.id, &imu_channel);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to find IMU channel: %s", esp_err_to_name(err));
+        return;
+    }
+    ESP_LOGI(TAG, "IMU channel registered successfully with ID: %d", imu_channel->config->id);
+
+    // start the EMU gather task
+    xTaskCreate(IMU_Gather_Task, "IMU_Gather", 2048, NULL, 1, NULL);
 }
