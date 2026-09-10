@@ -19,7 +19,6 @@
 #include "sdkconfig.h"
 #include "soc/soc_caps.h"
 #include "status_led.h"
-#include "telemetry.h"
 #include "websocket.h"
 
 #if defined(SOC_WIFI_SUPPORTED) && SOC_WIFI_SUPPORTED
@@ -302,16 +301,6 @@ esp_err_t vigilant_init(VigilantConfig VgConfig) {
     ESP_LOGI(TAG, "This node unique name is: %s",
              VgConfig.unique_component_name);
     s_cfg = VgConfig;
-
-    // Initialize the telemetry pipeline after all other components are set up
-    ESP_LOGI(TAG, "Initializing telemetry pipeline");
-    err = pipeline_init();
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize telemetry pipeline: %s",
-                 esp_err_to_name(err));
-        return err;
-    }
-    ESP_LOGI(TAG, "Telemetry pipeline initialized successfully");
 
     return ESP_OK;
 }
