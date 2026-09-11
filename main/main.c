@@ -97,43 +97,6 @@ void IMU_Gather_Task(void* pvParameters) {
     }
 }
 
-void IMU_Consumer_Task(void* pvParameters) {
-    sensor_channel_t* imu_channel = (sensor_channel_t*)pvParameters;
-    if (imu_channel == NULL || imu_channel->config == NULL) {
-        ESP_LOGE(TAG, "IMU consumer task received an invalid channel");
-        vTaskDelete(NULL);
-        return;
-    }
-    ESP_LOGI(TAG, "[IMU Consumer] IMU channel found with ID: %d",
-             imu_channel->config->id);
-
-    while (1) {
-        sensor_measurement_t measurement;
-        QueueHandle_t queue = imu_channel->queue;
-
-        int count = 0;
-        while (xQueueReceive(queue, &measurement, 0) == pdPASS){ // checks if the queue is non-empty
-            /*ESP_LOGI(TAG,
-                     "[IMU Consumer] Received measurement: "
-                     "timestamp=%llu, sequence=%u, ax=%f, ay=%f, az=%f",
-                     measurement.timestamp_us, measurement.sequence,
-                     measurement.data.imu.acceleration[0],
-                     measurement.data.imu.acceleration[1],
-                     measurement.data.imu.acceleration[2]);
-            */
-            count++;
-
-            // do the ekf predict here
-            // optionally we coul preintegrate the values, then just do ine prediction step
-        }
-        if (count > 0) {
-            ESP_LOGI(TAG, "[IMU Consumer] Processed %d measurements", count);
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(100)); // Adjust delay as needed
-    }
-}
-
 void app_main(void) {
     VigilantConfig VgConfig = {.unique_component_name = "Vigilant ESP Test",
                                .network_mode = NW_MODE_APSTA};
@@ -179,7 +142,7 @@ void app_main(void) {
     }
 
     // Start the IMU consumer task with the registered channel.
-    if (xTaskCreate(IMU_Consumer_Task, "IMU_Consumer", 2048, imu_channel, 1,
+    if (xTaskCreate(fusionProcess, "Fusion_Process", 2048, imu_channel, 1,
                     NULL) != pdPASS) {
         ESP_LOGE(TAG, "Failed to create IMU consumer task");
     }
