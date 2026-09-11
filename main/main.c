@@ -9,6 +9,7 @@
 #include "sdkconfig.h"
 #include "telemetry.h"
 #include "vigilant.h"
+#include "fusion.h"
 
 static const char* TAG = "app_main";
 
