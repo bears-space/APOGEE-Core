@@ -96,13 +96,15 @@ void fusionProcess(void* pvParameters) {
             */
             count++;
 
+            /*
             ESP_LOGI(TAG,
-                     "[IMU Consumer] Received measurement: "
-                     "timestamp=%llu, sequence=%u, ax=%f, ay=%f, az=%f",
-                     measurement.timestamp_us, measurement.sequence,
-                     measurement.data.imu.acceleration[0],
-                     measurement.data.imu.acceleration[1],
-                     measurement.data.imu.acceleration[2]);
+            "[IMU Consumer] Received measurement: "
+            "timestamp=%llu, sequence=%u, ax=%f, ay=%f, az=%f",
+            measurement.timestamp_us, measurement.sequence,
+            measurement.data.imu.acceleration[0],
+            measurement.data.imu.acceleration[1],
+            measurement.data.imu.acceleration[2]);
+            */
 
             ekf_step(
                 measurement.data.imu.acceleration[0],
