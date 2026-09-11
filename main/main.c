@@ -121,6 +121,9 @@ void IMU_Consumer_Task(void* pvParameters) {
                      measurement.data.imu.acceleration[2]);
             */
             count++;
+
+            // do the ekf predict here
+            // optionally we coul preintegrate the values, then just do ine prediction step
         }
         if (count > 0) {
             ESP_LOGI(TAG, "[IMU Consumer] Processed %d measurements", count);
