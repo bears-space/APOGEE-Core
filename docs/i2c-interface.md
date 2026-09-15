@@ -194,11 +194,14 @@ application startup flow.
 ## Example
 
 ```c
-// LSM6DSV320X high-G IMU (ST): accel + gyro over I2C
+// LSM6DSV320X high-G IMU (ST): low-G/high-G accel + gyro over I2C.
+// Note: unlike the older LSM6DSV, the LSM6DSV320X WHO_AM_I is 0x73, and its
+// output data registers are not at 0x28; use the ST driver (see the lsm6dsv
+// component) for the correct register map. The example below is illustrative.
 VigilantI2CDevice imu = {
     .address = 0x6A,
     .whoami_reg = 0x0F,     // WHO_AM_I register
-    .expected_whoami = 0x70,
+    .expected_whoami = 0x73,
     .handle = NULL,
 };
 

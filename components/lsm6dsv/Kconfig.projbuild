@@ -1,0 +1,185 @@
+menu "Vigilant Engine Configuration: LSM6DSV"
+    depends on VE_ENABLE_I2C
+
+    choice VE_LSM6DSV_SA0
+        prompt "I2C Address (SA0)"
+        default VE_LSM6DSV_SA0_LOW
+        help
+            Select the LSM6DSV320X I2C address via the SA0 strap pin.
+            SA0=0 selects 0x6A, SA0=1 selects 0x6B (7-bit).
+
+        config VE_LSM6DSV_SA0_LOW
+            bool "SA0 = 0 (0x6A)"
+
+        config VE_LSM6DSV_SA0_HIGH
+            bool "SA0 = 1 (0x6B)"
+    endchoice
+
+    choice VE_LSM6DSV_GY_FS
+        prompt "Gyroscope Full Scale"
+        default VE_LSM6DSV_GY_FS_2000DPS
+
+        config VE_LSM6DSV_GY_FS_250DPS
+            bool "250 dps"
+
+        config VE_LSM6DSV_GY_FS_500DPS
+            bool "500 dps"
+
+        config VE_LSM6DSV_GY_FS_1000DPS
+            bool "1000 dps"
+
+        config VE_LSM6DSV_GY_FS_2000DPS
+            bool "2000 dps"
+
+        config VE_LSM6DSV_GY_FS_4000DPS
+            bool "4000 dps"
+    endchoice
+
+    choice VE_LSM6DSV_XL_FS
+        prompt "Low-G Accelerometer Full Scale"
+        default VE_LSM6DSV_XL_FS_4G
+
+        config VE_LSM6DSV_XL_FS_2G
+            bool "2 g"
+
+        config VE_LSM6DSV_XL_FS_4G
+            bool "4 g"
+
+        config VE_LSM6DSV_XL_FS_8G
+            bool "8 g"
+
+        config VE_LSM6DSV_XL_FS_16G
+            bool "16 g"
+    endchoice
+
+    choice VE_LSM6DSV_HG_FS
+        prompt "High-G Accelerometer Full Scale"
+        default VE_LSM6DSV_HG_FS_320G
+
+        config VE_LSM6DSV_HG_FS_32G
+            bool "32 g"
+
+        config VE_LSM6DSV_HG_FS_64G
+            bool "64 g"
+
+        config VE_LSM6DSV_HG_FS_128G
+            bool "128 g"
+
+        config VE_LSM6DSV_HG_FS_256G
+            bool "256 g"
+
+        config VE_LSM6DSV_HG_FS_320G
+            bool "320 g"
+    endchoice
+
+    choice VE_LSM6DSV_ODR
+        prompt "Accelerometer / Gyroscope Output Data Rate"
+        default VE_LSM6DSV_ODR_120HZ
+        help
+            Shared ODR applied to both the low-G accelerometer and the
+            gyroscope. High-accuracy ODR (HAODR) modes are not exposed;
+            they require a shared bit change that conflicts with normal use.
+
+        config VE_LSM6DSV_ODR_OFF
+            bool "Power-down"
+
+        config VE_LSM6DSV_ODR_15HZ
+            bool "15 Hz"
+
+        config VE_LSM6DSV_ODR_30HZ
+            bool "30 Hz"
+
+        config VE_LSM6DSV_ODR_60HZ
+            bool "60 Hz"
+
+        config VE_LSM6DSV_ODR_120HZ
+            bool "120 Hz"
+
+        config VE_LSM6DSV_ODR_240HZ
+            bool "240 Hz"
+
+        config VE_LSM6DSV_ODR_480HZ
+            bool "480 Hz"
+
+        config VE_LSM6DSV_ODR_960HZ
+            bool "960 Hz"
+
+        config VE_LSM6DSV_ODR_1920HZ
+            bool "1920 Hz"
+
+        config VE_LSM6DSV_ODR_3840HZ
+            bool "3840 Hz"
+
+        config VE_LSM6DSV_ODR_7680HZ
+            bool "7680 Hz"
+    endchoice
+
+    choice VE_LSM6DSV_XL_MODE
+        prompt "Low-G Accelerometer Mode"
+        default VE_LSM6DSV_XL_MODE_HIGH_PERFORMANCE
+
+        config VE_LSM6DSV_XL_MODE_HIGH_PERFORMANCE
+            bool "High performance"
+
+        config VE_LSM6DSV_XL_MODE_NORMAL
+            bool "Normal"
+    endchoice
+
+    choice VE_LSM6DSV_GY_MODE
+        prompt "Gyroscope Mode"
+        default VE_LSM6DSV_GY_MODE_HIGH_PERFORMANCE
+
+        config VE_LSM6DSV_GY_MODE_HIGH_PERFORMANCE
+            bool "High performance"
+
+        config VE_LSM6DSV_GY_MODE_LOW_POWER
+            bool "Low power"
+
+        config VE_LSM6DSV_GY_MODE_SLEEP
+            bool "Sleep"
+    endchoice
+
+    choice VE_LSM6DSV_HG_ODR
+        prompt "High-G Accelerometer Output Data Rate"
+        default VE_LSM6DSV_HG_ODR_1920HZ
+
+        config VE_LSM6DSV_HG_ODR_OFF
+            bool "Power-down"
+
+        config VE_LSM6DSV_HG_ODR_480HZ
+            bool "480 Hz"
+
+        config VE_LSM6DSV_HG_ODR_960HZ
+            bool "960 Hz"
+
+        config VE_LSM6DSV_HG_ODR_1920HZ
+            bool "1920 Hz"
+
+        config VE_LSM6DSV_HG_ODR_3840HZ
+            bool "3840 Hz"
+
+        config VE_LSM6DSV_HG_ODR_7680HZ
+            bool "7680 Hz"
+    endchoice
+
+    config VE_LSM6DSV_HG_REG_OUT
+        bool "High-G Channel Data Registers Enabled"
+        default y
+        help
+            Enable reading of the high-g accelerometer data output registers.
+            Requires the high-g ODR to be non-zero.
+
+    config VE_LSM6DSV_BDU
+        bool "Block Data Update"
+        default y
+        help
+            Block data update: output registers are not updated until both
+            halves of the data have been read, preventing torn reads.
+
+    config VE_LSM6DSV_IF_INC
+        bool "Register Address Auto-Increment"
+        default y
+        help
+            Enable automatic address increment for multi-register reads/writes.
+            Required for burst reads of the output data registers.
+endmenu
