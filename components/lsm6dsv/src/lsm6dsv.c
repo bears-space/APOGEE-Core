@@ -21,16 +21,28 @@ static VigilantI2CDevice s_dev = {
 static stmdev_ctx_t s_ctx = {0};
 static bool s_initialized = false;
 
+/* The first I2C access after a device is added can fail once (bus/driver
+ * transient); retry a few times before giving up. */
+#define VE_LSM6DSV_I2C_ATTEMPTS 3
+#define VE_LSM6DSV_I2C_RETRY_DELAY_MS 1
+
 static int32_t platform_read(void* handle, uint8_t reg, uint8_t* buf,
                              uint16_t len)
 {
     if (len == 0) {
         return 0;
     }
-    return vigilant_i2c_read_regs((VigilantI2CDevice*)handle, reg, buf, len) ==
-                   ESP_OK
-               ? 0
-               : -1;
+
+    for (int attempt = 0; attempt < VE_LSM6DSV_I2C_ATTEMPTS; ++attempt) {
+        if (vigilant_i2c_read_regs((VigilantI2CDevice*)handle, reg, buf,
+                                   len) == ESP_OK) {
+            return 0;
+        }
+        if (attempt + 1 < VE_LSM6DSV_I2C_ATTEMPTS) {
+            vTaskDelay(pdMS_TO_TICKS(VE_LSM6DSV_I2C_RETRY_DELAY_MS));
+        }
+    }
+    return -1;
 }
 
 static int32_t platform_write(void* handle, uint8_t reg, const uint8_t* buf,
@@ -39,10 +51,17 @@ static int32_t platform_write(void* handle, uint8_t reg, const uint8_t* buf,
     if (len == 0) {
         return 0;
     }
-    return vigilant_i2c_write_regs((VigilantI2CDevice*)handle, reg, buf, len) ==
-                   ESP_OK
-               ? 0
-               : -1;
+
+    for (int attempt = 0; attempt < VE_LSM6DSV_I2C_ATTEMPTS; ++attempt) {
+        if (vigilant_i2c_write_regs((VigilantI2CDevice*)handle, reg, buf,
+                                    len) == ESP_OK) {
+            return 0;
+        }
+        if (attempt + 1 < VE_LSM6DSV_I2C_ATTEMPTS) {
+            vTaskDelay(pdMS_TO_TICKS(VE_LSM6DSV_I2C_RETRY_DELAY_MS));
+        }
+    }
+    return -1;
 }
 
 static void platform_delay(uint32_t millisec)
@@ -96,13 +115,23 @@ esp_err_t ve_lsm6dsv_init(const ve_lsm6dsv_config_t* config)
     s_ctx.handle = &s_dev;
     s_ctx.priv_data = NULL;
 
-    ret = lsm6dsv320x_sw_reset(&s_ctx);
-    if (ret != 0) {
+    /* The first transaction after a device is added can fail once, and this
+     * check bypasses platform_read(), so retry it here as well. */
+    for (int attempt = 0; attempt < VE_LSM6DSV_I2C_ATTEMPTS; ++attempt) {
+        err = vigilant_i2c_whoami_check(&s_dev);
+        if (err == ESP_OK) {
+            break;
+        }
+        if (attempt + 1 < VE_LSM6DSV_I2C_ATTEMPTS) {
+            vTaskDelay(pdMS_TO_TICKS(VE_LSM6DSV_I2C_RETRY_DELAY_MS));
+        }
+    }
+    if (err != ESP_OK) {
         goto fail;
     }
 
-    err = vigilant_i2c_whoami_check(&s_dev);
-    if (err != ESP_OK) {
+    ret = lsm6dsv320x_sw_reset(&s_ctx);
+    if (ret != 0) {
         goto fail;
     }
 
