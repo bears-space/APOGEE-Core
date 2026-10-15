@@ -1,0 +1,9 @@
+idf_component_register(
+    SRCS
+        "src/mmc5983ma.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        esp_event
+        vigilant_engine
+)
