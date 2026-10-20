@@ -302,8 +302,6 @@ esp_err_t vigilant_init(VigilantConfig VgConfig) {
              VgConfig.unique_component_name);
     s_cfg = VgConfig;
 
-    // Set info status once
-
     return ESP_OK;
 }
 
