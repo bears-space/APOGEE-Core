@@ -23,7 +23,7 @@ void app_main(void) {
 
     int16_t gyro_data[3] = {0};
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(1000/120));
 
         imu_err = ve_lsm6dsv_read_gyro_raw(gyro_data);
         if (imu_err != ESP_OK) {
