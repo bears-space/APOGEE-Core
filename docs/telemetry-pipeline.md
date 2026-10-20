@@ -2,7 +2,7 @@
 
 The telemetry pipeline provides a small, uniform path for sensor tasks to publish measurements into per-sensor FreeRTOS queues. Each sensor channel owns one queue, tracks sequence and drop counters, and is registered by a unique channel ID so other tasks can find it later.
 
-The current implementation is intentionally minimal: it creates channels, stores them in a registry, accepts measurements, and optionally notifies a fusion/consumer task. It does not yet implement sensor fusion, queue draining, persistence, or channel destruction.
+The current implementation is intentionally minimal: it creates channels, stores them in a registry, accepts measurements, and optionally notifies a fusion/consumer task. The application connects the LSM6DSV320X producer to a queue consumer that runs the acceleration EKF. Persistence and network transmission are not implemented by this module.
 
 ```mermaid
 flowchart TD
@@ -15,7 +15,7 @@ flowchart TD
     SUBMIT --> META["Pipeline metadata<br>sensor_id, type, sequence"]
     SUBMIT --> DROP["Drop counter<br>when queue is full"]
     SUBMIT --> NOTIFY["Optional task notification"]
-    Q --> CONSUMER["Fusion / consumer task<br>not implemented yet"]
+    Q --> CONSUMER["fusionProcess()<br>acceleration EKF"]
 ```
 
 ## Data Model
@@ -151,7 +151,7 @@ if (err != ESP_OK) {
 
 ## Lifecycle
 
-`vigilant_init()` initializes the telemetry pipeline automatically after the core networking and optional I2C setup. If you use the telemetry module outside `vigilant_init()`, call `pipeline_init()` before creating channels.
+The application calls `pipeline_init()` once after `vigilant_init()` has initialized networking and the optional I2C bus. Call it before creating channels; do not reinitialize a populated registry.
 
 Typical setup:
 
@@ -171,7 +171,7 @@ ESP_ERROR_CHECK(sensor_registry_find(get_sensor_registry(), 1, &channel));
 
 The `sensor_channel_config_t` is stored by pointer, so it must outlive the channel. Use static storage or another lifetime that remains valid for as long as the channel exists.
 
-`pipeline_deinit()` currently succeeds only when the registry is empty. Since public channel destruction is not implemented yet, this is mainly useful before any channels are created.
+`pipeline_destroy_channel(id)` removes a channel and frees its queue. Stop all producers and consumers using that channel before calling it. `pipeline_deinit()` succeeds only when the registry is empty.
 
 ## Submitting Measurements
 
@@ -217,9 +217,10 @@ Public functions in `telemetry.h`:
 | `get_sensor_registry()` | Returns the global registry pointer. |
 | `sensor_registry_find(registry, id, out_channel)` | Finds a registered channel by ID. |
 | `pipeline_submit_measurement(channel, measurement, timeout)` | Copies metadata into a measurement and sends it to the channel queue. |
+| `pipeline_destroy_channel(id)` | Removes an unused channel and frees its queue. |
 | `pipeline_deinit()` | Deinitializes an empty registry. |
 
-Internal helpers in `telemetry.c` include registry initialization, growth, add, and deinit functions. Channel destruction is stubbed in the source today and is not exposed in the public header.
+Internal helpers in `telemetry.c` include registry initialization, growth, add, and deinit functions.
 
 ## Implementation Notes
 
@@ -229,3 +230,43 @@ Internal helpers in `telemetry.c` include registry initialization, growth, add, 
 - `pipeline_create_channel()` allocates channel storage with `calloc()` and queue storage through FreeRTOS.
 - On channel registration failure, the created queue and channel allocation are cleaned up.
 - A future consumer/fusion task should read `sensor_measurement_t` values from each channel queue and handle sequence gaps.
+
+## LSM6DSV320X application integration
+
+`main/sensor/LSM6DSV_sensor.c` registers channel **1**, named `LSM6DSV320X IMU`,
+and starts the acquisition task. `app_main()` initializes the pipeline and starts
+`fusionProcess()` to consume that channel. The example sensor is not compiled.
+
+The IMU payload uses **m/s²** for low-G acceleration (including gravity) and
+**rad/s** for angular velocity, in the chip's native axes. Conversion functions
+are selected from the full-scale settings read back from the chip, so changing
+ranges in menuconfig also changes the conversion correctly. The values are not
+bias-calibrated or rotated into board/world coordinates. `MEASUREMENT_CALIBRATED`
+is not set. A raw value at either signed 16-bit limit sets `MEASUREMENT_SATURATED`.
+
+The task requires matching, enabled low-G and gyro ODRs. A periodic `esp_timer`
+wakes it twice per nominal sample period, independently of the FreeRTOS tick
+rate. It reads both vectors only when both data-ready flags are asserted;
+otherwise it waits for another wakeup. Failed reads are logged at most once per
+second and are not submitted as valid or stale measurements. Submissions never
+block acquisition; queue overflow increments the pipeline's drop counter.
+Startup failures release the timer, task, channel, and IMU resources owned by
+this integration, allowing a retry.
+
+`nominal_period_us` reflects the configured sensor ODR, rounded to microseconds
+(for example 8333 µs at 120 Hz, or 4167 µs at 240 Hz). `timestamp_us` is the host
+read time, not the sensor's hardware timestamp. Timer wakeups can be coalesced
+and output registers hold only the latest sample: this path does not guarantee
+lossless capture, especially at high ODRs. Interrupt wiring and FIFO batching
+are not configured. The high-G accelerometer remains available through the raw
+driver API but is not part of this low-G/gyro telemetry channel.
+
+The consumer blocks on the queue, preserves the previous valid timestamp between
+measurements, and skips invalid, saturated, or non-monotonic samples. Its current
+EKF uses acceleration only; angular velocity is carried through the queue for
+future attitude fusion. It does not remove gravity or produce a fused attitude.
+
+Run `tests/host/run.sh` for host integration checks covering the actual producer,
+ST conversion/register code, and telemetry queue logic with mocked hardware and
+FreeRTOS services. Hardware sampling, bus timing, and interrupt behavior still
+require validation on the board.

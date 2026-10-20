@@ -32,8 +32,8 @@ typedef struct {
 
     union {
         struct {
-            float acceleration[3];
-            float angular_velocity[3];
+            float acceleration[3];      // m/s^2, sensor axes, includes gravity
+            float angular_velocity[3];  // rad/s, sensor axes
         } imu;
 
         struct {
@@ -90,6 +90,8 @@ esp_err_t pipeline_submit_measurement(sensor_channel_t* channel,
 sensor_channel_registry_t* get_sensor_registry(void);
 esp_err_t pipeline_init(void);
 esp_err_t pipeline_create_channel(const sensor_channel_config_t* config);
+/* Stop all producers and consumers before destroying their channel. */
+esp_err_t pipeline_destroy_channel(uint8_t sensor_id);
 esp_err_t sensor_registry_find(sensor_channel_registry_t* registry,
                                sensor_channel_id_t id,
                                sensor_channel_t** out_channel);

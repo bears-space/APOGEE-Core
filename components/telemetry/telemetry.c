@@ -263,8 +263,26 @@ esp_err_t pipeline_submit_measurement(sensor_channel_t* channel,
 }
 
 esp_err_t pipeline_destroy_channel(uint8_t sensor_id) {
-    // Implementation for destroying a sensor channel
-    return ESP_OK;
+    sensor_channel_registry_t* registry = &sensor_registry;
+    if (registry->mutex == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xSemaphoreTake(registry->mutex, portMAX_DELAY) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    esp_err_t err = ESP_ERR_NOT_FOUND;
+    for (size_t i = 0; i < registry->count; ++i) {
+        sensor_channel_t* channel = registry->items[i];
+        if (channel->config->id == sensor_id) {
+            registry->items[i] = registry->items[--registry->count];
+            vQueueDelete(channel->queue);
+            free(channel);
+            err = ESP_OK;
+            break;
+        }
+    }
+    xSemaphoreGive(registry->mutex);
+    return err;
 }
 
 esp_err_t pipeline_deinit(void) {

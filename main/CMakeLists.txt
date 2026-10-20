@@ -1,10 +1,7 @@
 idf_component_register(
     SRCS
         "main.c"
+        "sensor/LSM6DSV_sensor.c"
     INCLUDE_DIRS "."
-<<<<<<< HEAD
-    REQUIRES vigilant_engine lsm6dsv
-=======
-    REQUIRES vigilant_engine bno055 telemetry fusion
->>>>>>> feature/telemetry-pipeline
+    REQUIRES vigilant_engine lsm6dsv telemetry fusion esp_timer
 )
