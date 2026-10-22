@@ -140,6 +140,8 @@ esp_err_t i2c_init(void) {
     return ESP_OK;
 }
 
+i2c_master_bus_handle_t i2c_get_bus_handle(void) { return s_i2c_bus; }
+
 esp_err_t i2c_add_device(VigilantI2CDevice* device) {
     if (!s_i2c_bus) {
         return ESP_ERR_INVALID_STATE;

@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 esp_err_t i2c_init(void);
+i2c_master_bus_handle_t i2c_get_bus_handle(void);
 esp_err_t i2c_add_device(VigilantI2CDevice* device);
 esp_err_t i2c_remove_device(VigilantI2CDevice* device);
 esp_err_t i2c_set_reg8(VigilantI2CDevice* device, uint8_t reg, uint8_t value);
