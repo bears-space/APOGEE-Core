@@ -1,18 +1,99 @@
 #include <unistd.h>
 
+#include "WSEN_HIDS_2525020210002.h"
+#include "WSEN_ISDS_2536030320001.h"
+#include "WSEN_PADS_2511020213301.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "i2c.h"
+#include "platform.h"
 #include "vigilant.h"
 
-#include "platform.h"
-#include "WSEN_HIDS_2525020210002.h"
-#include "WSEN_PADS_2511020213301.h"
-
-static WE_sensorInterface_t hids;
+static WE_sensorInterface_t hids;  // thermometer
+static WE_sensorInterface_t isds;  // low-g IMU
+static WE_sensorInterface_t pads;  // barometer
 
 // static const char *TAG = "app_main";
+
+void hids_init(void) {
+    HIDS_Get_Default_Interface(&hids);
+    hids.interfaceType = WE_i2c;
+    hids.handle = i2c_get_bus_handle();
+
+    // Wait for sensor bootup
+    while (WE_SUCCESS != WE_isSensorInterfaceReady(&hids)) {
+    }
+    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
+}
+
+bool isds_init(void) {
+    // Initialize sensor interface (i2c with ISDS address, burst mode activated)
+    ISDS_getDefaultInterface(&isds);
+    isds.interfaceType = WE_i2c;
+    isds.options.i2c.burstMode = 1;
+    isds.options.i2c.address =
+        ISDS_ADDRESS_I2C_0;  // is on 6A instead of 6B, maybe change back when
+                             // new PCB arrives
+    isds.handle = i2c_get_bus_handle();
+
+    // Wait for sensor bootup
+    while (WE_SUCCESS != WE_isSensorInterfaceReady(&isds)) {
+    }
+    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
+
+    WE_Delay(5);
+
+    // First communication test
+    uint8_t deviceIdValue = 0;
+    if (WE_SUCCESS == ISDS_getDeviceID(&isds, &deviceIdValue)) {
+        printf("ISDS_DEVICE_ID_VALUE should be %d\n", ISDS_DEVICE_ID_VALUE);
+        printf("deviceIdValue is actually %d\n", deviceIdValue);
+        if (deviceIdValue ==
+            ISDS_DEVICE_ID_VALUE)  // who am i ? - i am WSEN-ISDS!
+        {
+            debugPrintln("**** ISDS_DEVICE_ID_VALUE: OK ****");
+        } else {
+            debugPrintln("**** ISDS_DEVICE_ID_VALUE: NOT OK ****");
+            return false;
+        }
+    } else {
+        debugPrintln("**** ISDS_getDeviceID(): NOT OK ****");
+        return false;
+    }
+
+    // Perform soft reset of the sensor
+    ISDS_softReset(&isds, ISDS_enable);
+    ISDS_state_t swReset;
+    do {
+        ISDS_getSoftResetState(&isds, &swReset);
+    } while (swReset);
+    debugPrintln("**** ISDS reset complete ****");
+
+    // Perform reboot (retrieve trimming parameters from nonvolatile memory)
+    ISDS_reboot(&isds, ISDS_enable);
+    WE_Delay(15);
+    debugPrintln("**** ISDS reboot complete ****");
+
+    // Enable block data update
+    ISDS_enableBlockDataUpdate(&isds, ISDS_enable);
+
+    // Sampling rate (104 Hz)
+    ISDS_setAccOutputDataRate(&isds, ISDS_accOdr104Hz);
+    ISDS_setGyroOutputDataRate(&isds, ISDS_gyroOdr104Hz);
+
+    // Accelerometer 16g range
+    ISDS_setAccFullScale(&isds, ISDS_accFullScaleSixteenG);
+
+    // Gyroscope 2000 dps range
+    ISDS_setGyroFullScale(&isds, ISDS_gyroFullScale2000dps);
+
+    // Disable the disabling of high performance mode
+    ISDS_disableAccHighPerformanceMode(&isds, ISDS_disable);
+    ISDS_disableGyroHighPerformanceMode(&isds, ISDS_disable);
+
+    return true;
+}
 
 void app_main(void) {
     VigilantConfig VgConfig = {.unique_component_name = "Vigilant ESP Test",
@@ -20,24 +101,73 @@ void app_main(void) {
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
 
     // Init thermometer
-    HIDS_Get_Default_Interface(&hids);
-    hids.interfaceType = WE_i2c;
-    hids.handle = i2c_get_bus_handle();
-
-    // Wait for sensor bootup
-    while (WE_SUCCESS != WE_isSensorInterfaceReady(&hids)) {
-
-    }
-    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
+    hids_init();
+    isds_init();
 
     // Test sensor readout routine
     int32_t temperatureRaw = 0;
     int32_t humidityRaw = 0;
     hids_measureCmd_t measureCmd = HIDS_MEASURE_HPM;
     while (true) {
-        if (WE_SUCCESS == HIDS_Sensor_Measure_Raw(&hids, measureCmd, &temperatureRaw, &humidityRaw))
-        {
-            printf("temp is %f °C, humidity is %f %%\n", (float) temperatureRaw / 1000.0, (float) humidityRaw / 1000.0);
+        // Test thermometer
+        if (WE_SUCCESS == HIDS_Sensor_Measure_Raw(&hids, measureCmd,
+                                                  &temperatureRaw,
+                                                  &humidityRaw)) {
+            printf("temp is %f °C, humidity is %f %%\n",
+                   (float)temperatureRaw / 1000.0, (float)humidityRaw / 1000.0);
         }
+
+        // Test low-g IMU
+        ISDS_state_t dataReady;
+        float xAcc = 0;
+        float yAcc = 0;
+        float zAcc = 0;
+        float xRate = 0;
+        float yRate = 0;
+        float zRate = 0;
+        float temperature = 0;
+
+        // Wait until the acceleration values are ready to read
+        do {
+            ISDS_isAccelerationDataReady(&isds, &dataReady);
+        } while (dataReady == ISDS_disable);
+
+        // Read acceleration values
+        if (ISDS_getAccelerations_float(&isds, &xAcc, &yAcc, &zAcc) !=
+            WE_SUCCESS) {
+            debugPrintln("**** ISDS_getAccelerations_float(): NOT OK ****");
+            xAcc = 0;
+            yAcc = 0;
+            zAcc = 0;
+        }
+
+        // Wait until the gyroscope values are ready to read
+        do {
+            ISDS_isGyroscopeDataReady(&isds, &dataReady);
+        } while (dataReady == ISDS_disable);
+
+        // Read gyroscope values
+        if (ISDS_getAngularRates_float(&isds, &xRate, &yRate, &zRate) !=
+            WE_SUCCESS) {
+            debugPrintln("**** ISDS_getAngularRates_float(): NOT OK ****");
+            xRate = 0;
+            yRate = 0;
+            zRate = 0;
+        }
+
+        // Wait until the temperature value is ready to read
+        do {
+            ISDS_isTemperatureDataReady(&isds, &dataReady);
+        } while (dataReady == ISDS_disable);
+        if (ISDS_getTemperature_float(&isds, &temperature) != WE_SUCCESS) {
+            debugPrintln("**** ISDS_getTemperature_float(): NOT OK ****");
+            temperature = 0;
+        }
+
+        /* Print values to debug UART */
+        printf(
+            "LOW-G IMU xAcc %f, yAcc %f, zAcc %f, xRate %f, yRate %f, zRate "
+            "%f, temp %f\n",
+            xAcc, yAcc, zAcc, xRate, yRate, zRate, temperature);
     }
 }
