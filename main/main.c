@@ -17,6 +17,7 @@ static WE_sensorInterface_t pads;  // barometer
 // static const char *TAG = "app_main";
 
 void hids_init(void) {
+    // TODO optimize initialization routine
     HIDS_Get_Default_Interface(&hids);
     hids.interfaceType = WE_i2c;
     hids.handle = i2c_get_bus_handle();
@@ -28,6 +29,7 @@ void hids_init(void) {
 }
 
 bool isds_init(void) {
+    // TODO optimize initialization routine
     // Initialize sensor interface (i2c with ISDS address, burst mode activated)
     ISDS_getDefaultInterface(&isds);
     isds.interfaceType = WE_i2c;
@@ -95,27 +97,97 @@ bool isds_init(void) {
     return true;
 }
 
+bool pads_init(void) {
+    // TODO optimize initialization routine
+    // Initialize sensor interface (i2c with PADS address, burst mode
+    // deactivated)
+    PADS_getDefaultInterface(&pads);
+    pads.interfaceType = WE_i2c;
+    pads.handle = i2c_get_bus_handle();
+
+    // Wait for boot
+    while (WE_SUCCESS != WE_isSensorInterfaceReady(&pads)) {
+    }
+    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
+
+    WE_Delay(5);
+
+    // First communication test
+    uint8_t deviceIdValue = 0;
+    if (WE_SUCCESS == PADS_getDeviceID(&pads, &deviceIdValue)) {
+        if (deviceIdValue ==
+            PADS_DEVICE_ID_VALUE)  // who am i ? - i am WSEN-PADS!
+        {
+            debugPrintln("**** PADS_DEVICE_ID_VALUE: OK ****");
+        } else {
+            debugPrintln("**** PADS_DEVICE_ID_VALUE: NOT OK ****");
+            return false;
+        }
+    } else {
+        debugPrintln("**** PADS_getDeviceID(): NOT OK ****");
+        return false;
+    }
+
+    // Perform soft reset of the sensor
+    PADS_softReset(&pads, PADS_enable);
+    PADS_state_t swReset;
+    do {
+        PADS_getSoftResetState(&pads, &swReset);
+    } while (swReset);
+    debugPrintln("**** PADS reset complete ****");
+
+    return true;
+}
+
 void app_main(void) {
     VigilantConfig VgConfig = {.unique_component_name = "Vigilant ESP Test",
                                .network_mode = NW_MODE_APSTA};
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
 
     // Init thermometer
+    // TODO fail gracefully if any sensor breaks / fails to initialize
     hids_init();
     isds_init();
+    // pads_init(); // TODO reenable when we have a board with a non-fried PADS
+    // sensor
 
     // Test sensor readout routine
-    int32_t temperatureRaw = 0;
-    int32_t humidityRaw = 0;
-    hids_measureCmd_t measureCmd = HIDS_MEASURE_HPM;
+    // TODO replace test code with proper readout logic
     while (true) {
         // Test thermometer
+        int32_t hids_temperatureRaw = 0;
+        int32_t hids_humidityRaw = 0;
+        hids_measureCmd_t measureCmd = HIDS_MEASURE_HPM;
         if (WE_SUCCESS == HIDS_Sensor_Measure_Raw(&hids, measureCmd,
-                                                  &temperatureRaw,
-                                                  &humidityRaw)) {
-            printf("temp is %f °C, humidity is %f %%\n",
-                   (float)temperatureRaw / 1000.0, (float)humidityRaw / 1000.0);
+                                                  &hids_temperatureRaw,
+                                                  &hids_humidityRaw)) {
+            printf("Thermometer temp is %f °C, humidity is %f %%\n",
+                   (float)hids_temperatureRaw / 1000.0,
+                   (float)hids_humidityRaw / 1000.0);
         }
+
+        // Test barometer
+        // TODO reenable when we have a board with a non-fried PADS sensor
+        /*float pads_pressureFloat = 0;
+        if (WE_SUCCESS == PADS_getPressure_float(&pads, &pads_pressureFloat))
+        {
+            printf("Barometer pressure is %f kPa\n", pads_pressureFloat);
+        }
+        else
+        {
+            debugPrintln("**** PADS_getPressure_float(): NOT OK ****");
+        }
+
+        float pads_temperatureFloat = 0;
+        if (WE_SUCCESS == PADS_getTemperature_float(&pads,
+        &pads_temperatureFloat))
+        {
+            printf("Barometer temperature is %f °C\n", pads_temperatureFloat);
+        }
+        else
+        {
+            debugPrintln("**** PADS_getTemperature_float(): NOT OK ****");
+        }*/
 
         // Test low-g IMU
         ISDS_state_t dataReady;
@@ -125,7 +197,7 @@ void app_main(void) {
         float xRate = 0;
         float yRate = 0;
         float zRate = 0;
-        float temperature = 0;
+        float isds_temperature = 0;
 
         // Wait until the acceleration values are ready to read
         do {
@@ -159,15 +231,15 @@ void app_main(void) {
         do {
             ISDS_isTemperatureDataReady(&isds, &dataReady);
         } while (dataReady == ISDS_disable);
-        if (ISDS_getTemperature_float(&isds, &temperature) != WE_SUCCESS) {
+        if (ISDS_getTemperature_float(&isds, &isds_temperature) != WE_SUCCESS) {
             debugPrintln("**** ISDS_getTemperature_float(): NOT OK ****");
-            temperature = 0;
+            isds_temperature = 0;
         }
 
         /* Print values to debug UART */
         printf(
             "LOW-G IMU xAcc %f, yAcc %f, zAcc %f, xRate %f, yRate %f, zRate "
             "%f, temp %f\n",
-            xAcc, yAcc, zAcc, xRate, yRate, zRate, temperature);
+            xAcc, yAcc, zAcc, xRate, yRate, zRate, isds_temperature);
     }
 }
