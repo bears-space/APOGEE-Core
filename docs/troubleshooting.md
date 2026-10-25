@@ -9,6 +9,15 @@ You are not in an ESP-IDF exported shell.
 - In VS Code, prefer the ESP-IDF extension over generic `CMake Tools`
 - If `CMake Tools` logs an include failure for `/tools/cmake/project.cmake`, it launched without the ESP-IDF environment
 
+To stop VSCode's `CMake Tools` extension from throwing CMake errors at you, try adding these settings to your `.vscode/settings.json`:
+
+```json
+{
+    "cmake.configureOnOpen": false,
+    "cmake.buildBeforeRun": false
+}
+```
+
 ## `BIN not found`
 
 Make sure your build succeeded and the binaries exist:
