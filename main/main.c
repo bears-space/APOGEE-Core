@@ -14,7 +14,7 @@ static WE_sensorInterface_t hids;  // thermometer
 static WE_sensorInterface_t isds;  // low-g IMU
 static WE_sensorInterface_t pads;  // barometer
 
-// static const char *TAG = "app_main";
+static const char* TAG = "app_main";
 
 void hids_init(void) {
     // TODO optimize initialization routine
