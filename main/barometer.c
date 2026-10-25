@@ -1,5 +1,7 @@
 #include "barometer.h"
 
+static const char* TAG = "barometer";
+
 static WE_sensorInterface_t pads;
 
 bool barometer_init(void) {
@@ -13,23 +15,18 @@ bool barometer_init(void) {
     // Wait for boot
     while (WE_SUCCESS != WE_isSensorInterfaceReady(&pads)) {
     }
-    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
 
     WE_Delay(5);
 
     // First communication test
     uint8_t deviceIdValue = 0;
-    if (WE_SUCCESS == PADS_getDeviceID(&pads, &deviceIdValue)) {
-        if (deviceIdValue ==
-            PADS_DEVICE_ID_VALUE)  // who am i ? - i am WSEN-PADS!
-        {
-            debugPrintln("**** PADS_DEVICE_ID_VALUE: OK ****");
-        } else {
-            debugPrintln("**** PADS_DEVICE_ID_VALUE: NOT OK ****");
-            return false;
-        }
-    } else {
-        debugPrintln("**** PADS_getDeviceID(): NOT OK ****");
+    if (WE_SUCCESS != PADS_getDeviceID(&pads, &deviceIdValue)) {
+        ESP_LOGE(TAG, "Failed to get device ID");
+        return false;
+    }
+    if (deviceIdValue != PADS_DEVICE_ID_VALUE) {
+        ESP_LOGE(TAG, "Unexpected device ID: %d (instead of %d)", deviceIdValue,
+                 PADS_DEVICE_ID_VALUE);
         return false;
     }
 
@@ -39,8 +36,8 @@ bool barometer_init(void) {
     do {
         PADS_getSoftResetState(&pads, &swReset);
     } while (swReset);
-    debugPrintln("**** PADS reset complete ****");
 
+    ESP_LOGI(TAG, "Initialization successful");
     return true;
 }
 

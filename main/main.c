@@ -18,6 +18,7 @@ void app_main(void) {
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
 
     // Init sensors
+    ESP_LOGI(TAG, "Initializing sensors...");
     // TODO fail gracefully if any sensor breaks / fails to initialize
     // barometer_init(); // TODO reenable when we have board with working PADS
     imu_low_g_init();
@@ -37,6 +38,7 @@ void app_main(void) {
     float imu_low_g_temperature = 0;
 
     // Main loop
+    ESP_LOGI(TAG, "Entering main loop...");
     while (true) {
         // Update sensor values
         // barometer_read_pressure(&barometer_pressure);

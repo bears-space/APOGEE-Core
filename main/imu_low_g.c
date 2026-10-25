@@ -1,5 +1,7 @@
 #include "imu_low_g.h"
 
+static const char* TAG = "imu_low_g";
+
 static WE_sensorInterface_t isds;
 
 bool imu_low_g_init(void) {
@@ -16,25 +18,18 @@ bool imu_low_g_init(void) {
     // Wait for sensor bootup
     while (WE_SUCCESS != WE_isSensorInterfaceReady(&isds)) {
     }
-    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
 
     WE_Delay(5);
 
     // First communication test
     uint8_t deviceIdValue = 0;
-    if (WE_SUCCESS == ISDS_getDeviceID(&isds, &deviceIdValue)) {
-        printf("ISDS_DEVICE_ID_VALUE should be %d\n", ISDS_DEVICE_ID_VALUE);
-        printf("deviceIdValue is actually %d\n", deviceIdValue);
-        if (deviceIdValue ==
-            ISDS_DEVICE_ID_VALUE)  // who am i ? - i am WSEN-ISDS!
-        {
-            debugPrintln("**** ISDS_DEVICE_ID_VALUE: OK ****");
-        } else {
-            debugPrintln("**** ISDS_DEVICE_ID_VALUE: NOT OK ****");
-            return false;
-        }
-    } else {
-        debugPrintln("**** ISDS_getDeviceID(): NOT OK ****");
+    if (WE_SUCCESS != ISDS_getDeviceID(&isds, &deviceIdValue)) {
+        ESP_LOGE(TAG, "Failed to get device ID");
+        return false;
+    }
+    if (deviceIdValue != ISDS_DEVICE_ID_VALUE) {
+        ESP_LOGE(TAG, "Unexpected device ID: %d (instead of %d)", deviceIdValue,
+                 ISDS_DEVICE_ID_VALUE);
         return false;
     }
 
@@ -44,12 +39,10 @@ bool imu_low_g_init(void) {
     do {
         ISDS_getSoftResetState(&isds, &swReset);
     } while (swReset);
-    debugPrintln("**** ISDS reset complete ****");
 
     // Perform reboot (retrieve trimming parameters from nonvolatile memory)
     ISDS_reboot(&isds, ISDS_enable);
     WE_Delay(15);
-    debugPrintln("**** ISDS reboot complete ****");
 
     // Enable block data update
     ISDS_enableBlockDataUpdate(&isds, ISDS_enable);
@@ -67,6 +60,8 @@ bool imu_low_g_init(void) {
     // Disable the disabling of high performance mode
     ISDS_disableAccHighPerformanceMode(&isds, ISDS_disable);
     ISDS_disableGyroHighPerformanceMode(&isds, ISDS_disable);
+
+    ESP_LOGI(TAG, "Initialization successful");
 
     return true;
 }

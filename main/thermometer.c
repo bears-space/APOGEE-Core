@@ -1,5 +1,7 @@
 #include "thermometer.h"
 
+static const char* TAG = "thermometer";
+
 static WE_sensorInterface_t hids;
 
 void thermometer_init(void) {
@@ -11,7 +13,7 @@ void thermometer_init(void) {
     // Wait for sensor bootup
     while (WE_SUCCESS != WE_isSensorInterfaceReady(&hids)) {
     }
-    debugPrintln("**** WE_isSensorInterfaceReady(): OK ****");
+    ESP_LOGI(TAG, "Initialization successful");
 }
 
 bool thermometer_read(float* temperature, float* humidity) {
