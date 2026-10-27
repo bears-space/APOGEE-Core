@@ -151,11 +151,13 @@ if (err != ESP_OK) {
 
 ## Lifecycle
 
-`vigilant_init()` initializes the telemetry pipeline automatically after the core networking and optional I2C setup. If you use the telemetry module outside `vigilant_init()`, call `pipeline_init()` before creating channels.
+Telemetry is opt-in: `app_main()` initializes Vigilant Engine without starting sensor or fusion tasks. To use the pipeline, add `telemetry` to your component's dependencies and call `pipeline_init()` before creating channels; `vigilant_init()` does not initialize it.
 
 Typical setup:
 
 ```c
+ESP_ERROR_CHECK(pipeline_init());
+
 static const sensor_channel_config_t example_config = {
     .id = 1,
     .name = "Example IMU Sensor",
@@ -204,7 +206,7 @@ if (err == ESP_ERR_TIMEOUT) {
 
 If the queue is full, submission returns `ESP_ERR_TIMEOUT` and increments `channel->dropped_measurements`. The sequence number is incremented before queueing, so a consumer can detect gaps when drops occur.
 
-The example sensor in `main/sensor/example_sensor.c` uses `xTaskDelayUntil()` to publish simulated IMU measurements every 100 ms. Because there is currently no consumer draining the queue, the example will eventually report dropped measurements. That is expected with the current implementation.
+The example sensor in `main/sensor/example_sensor.c` uses `xTaskDelayUntil()` to publish simulated IMU measurements every 100 ms. It is not compiled or started by the default application. If enabled without a consumer draining the queue, the example will eventually report dropped measurements.
 
 ## Current API
 

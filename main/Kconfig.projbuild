@@ -1,27 +1,3 @@
-menu "GY-BNO055 Configuration"
-    config BNO055_RAW_OUTPUT
-        bool
-        default y
-        select VE_ENABLE_I2C
-
-    config BNO055_I2C_ADDRESS
-        hex "BNO055 I2C address"
-        range 0x28 0x29
-        default 0x28
-        help
-            Use 0x28 with ADR low or 0x29 with ADR high.
-            Configure SDA and SCL under Vigilant Engine Configuration: I2C.
-
-    config BNO055_SAMPLE_PERIOD_MS
-        int "Raw output interval (ms)"
-        range 10 60000
-        default 10
-        help
-            Target polling period: 10 ms gives 100 Hz. Timing is rounded up
-            to a FreeRTOS tick and depends on I2C and console throughput.
-            The magnetometer updates at 30 Hz, so its values can repeat.
-endmenu
-
 menu "Vigilant Engine Configuration: LEDs"
     config VE_ENABLE_STATUS_LED
         bool "Enable Status LED"
@@ -138,7 +114,6 @@ menu "Vigilant Engine Configuration: I2C"
     config VE_I2C_SCL_IO
         int "I2C SCL GPIO"
         range 0 64
-        default 2 if BNO055_RAW_OUTPUT
         default 0
         depends on VE_ENABLE_I2C
         help
