@@ -23,6 +23,8 @@ void app_main(void) {
 
     pipeline_init();
 
+    thermometer_sensor_init();
+
     /*
     // Init sensors
     ESP_LOGI(TAG, "Initializing sensors...");

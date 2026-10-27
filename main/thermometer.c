@@ -52,12 +52,9 @@ static void thermometer_task(void* arg) {
         vTaskDelete(NULL);
         return;
     }
-
-    esp_err_t err = ESP_OK;
-
+    ESP_LOGI(TAG, "%d: Thermometer sensor task running, channel: %s", count++,
+        channel->config->name);
     while (true) { // the main loop for gathering and submitting sensor data
-        ESP_LOGI(TAG, "%d: Thermometer sensor task running, channel: %s", count++,
-                 channel->config->name);
 
         bool success = thermometer_read(&thermometer_temperature, &thermometer_humidity);
 
@@ -73,13 +70,13 @@ static void thermometer_task(void* arg) {
             .flags = MEASUREMENT_VALID,
         };
 
-        if (err != ESP_OK || !success) {
+        if (!success) {
             measurement.flags = MEASUREMENT_ERROR;
 
-            ESP_LOGE(TAG, "Thermometer read failed: %s", esp_err_to_name(err));
+            ESP_LOGE(TAG, "Thermometer read failed");
         }
 
-        err = pipeline_submit_measurement(channel, &measurement, 0);
+        esp_err_t err = pipeline_submit_measurement(channel, &measurement, 0);
 
         if (err == ESP_ERR_TIMEOUT) {
             ESP_LOGW(TAG, "Measurement dropped, total: %lu",
