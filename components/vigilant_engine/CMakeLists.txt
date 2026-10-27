@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-set(requires esp-tls nvs_flash esp_netif esp_http_server driver esp_driver_gpio esp_driver_i2c esp_timer)
-=======
-set(requires esp-tls nvs_flash esp_netif esp_http_server esp_driver_i2c status_led)
->>>>>>> origin/niklas/wuerth-fixes
+set(requires esp-tls nvs_flash esp_netif esp_http_server driver esp_driver_gpio esp_driver_i2c esp_timer status_led)
 idf_build_get_property(target IDF_TARGET)
 idf_build_get_property(idf_path IDF_PATH)
 idf_build_get_property(build_dir BUILD_DIR)
