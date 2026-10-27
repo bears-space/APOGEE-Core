@@ -11,6 +11,8 @@
 #include "platform.h"
 #include "thermometer.h"
 
+#include "telemetry.h"
+
 static const char* TAG = "app_main";
 
 void app_main(void) {
@@ -18,18 +20,21 @@ void app_main(void) {
                                .network_mode = NW_MODE_APSTA};
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
 
+
+    pipeline_init();
+
+    /*
     // Init sensors
     ESP_LOGI(TAG, "Initializing sensors...");
     // TODO fail gracefully if any sensor breaks / fails to initialize
     // barometer_init(); // TODO reenable when we have board with working PADS
     imu_low_g_init();
-    thermometer_init();
+    
 
     // Sensor values
     float barometer_pressure = 0.0;
     float barometer_temperature = 0.0;
-    float thermometer_humidity = 0.0;
-    float thermometer_temperature = 0.0;
+
     float imu_low_g_xAcc = 0;
     float imu_low_g_yAcc = 0;
     float imu_low_g_zAcc = 0;
@@ -44,7 +49,7 @@ void app_main(void) {
         // Update sensor values
         // barometer_read_pressure(&barometer_pressure);
         // barometer_read_temperature(&barometer_temperature);
-        thermometer_read(&thermometer_temperature, &thermometer_humidity);
+        
         imu_low_g_read(&imu_low_g_xAcc, &imu_low_g_yAcc, &imu_low_g_zAcc,
                        &imu_low_g_xRate, &imu_low_g_yRate, &imu_low_g_zRate,
                        &imu_low_g_temperature);
@@ -60,4 +65,5 @@ void app_main(void) {
             imu_low_g_xAcc, imu_low_g_yAcc, imu_low_g_zAcc, imu_low_g_xRate,
             imu_low_g_yRate, imu_low_g_zRate, imu_low_g_temperature);
     }
+    */
 }

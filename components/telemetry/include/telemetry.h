@@ -11,6 +11,7 @@
 typedef enum {
     MEASUREMENT_IMU,
     MEASUREMENT_BAROMETER,
+    MEASUREMENT_THERMOMETER,
     MEASUREMENT_GNSS,
     MEASUREMENT_ADC
 } measurement_type_t;
@@ -40,6 +41,11 @@ typedef struct {
             float pressure_pa;
             float temperature_c;
         } barometer;
+
+        struct {
+            float temperature_c;
+            float humidity_percent;
+        } thermometer;
 
         struct {
             double latitude_deg;
