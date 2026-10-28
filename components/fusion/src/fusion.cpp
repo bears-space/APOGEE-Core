@@ -31,6 +31,9 @@ void fusionProcess(void* pvParameters) {
                      measurement.data.imu_low_g.zRate,
                      measurement.data.imu_low_g.temperature);
         }
+
+        //delay task
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Adjust the delay as needed
     }
 }
 
