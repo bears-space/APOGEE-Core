@@ -12,6 +12,7 @@
 #include "thermometer.h"
 
 #include "telemetry.h"
+#include "fusion.h"
 
 static const char* TAG = "app_main";
 
@@ -21,9 +22,12 @@ void app_main(void) {
     ESP_ERROR_CHECK(vigilant_init(VgConfig));
 
 
-    pipeline_init();
+    ESP_ERROR_CHECK(pipeline_init());
 
-    thermometer_sensor_init();
+    ESP_ERROR_CHECK(thermometer_sensor_init());
+    ESP_ERROR_CHECK(imu_low_g_sensor_init());
+
+    ESP_ERROR_CHECK(fusionInit());
 
     /*
     // Init sensors

@@ -10,6 +10,7 @@
 
 typedef enum {
     MEASUREMENT_IMU,
+    MEASUREMENT_IMU_LOW_G,
     MEASUREMENT_BAROMETER,
     MEASUREMENT_THERMOMETER,
     MEASUREMENT_GNSS,
@@ -36,6 +37,16 @@ typedef struct {
             float acceleration[3];
             float angular_velocity[3];
         } imu;
+
+        struct {
+            float xAcc;
+            float yAcc;
+            float zAcc;
+            float xRate;
+            float yRate;
+            float zRate;
+            float temperature;
+        } imu_low_g;
 
         struct {
             float pressure_pa;
@@ -89,6 +100,10 @@ typedef struct {
 
 typedef uint32_t sensor_channel_id_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 esp_err_t pipeline_submit_measurement(sensor_channel_t* channel,
                                       const sensor_measurement_t* measurement,
                                       TickType_t timeout);
@@ -100,3 +115,7 @@ esp_err_t sensor_registry_find(sensor_channel_registry_t* registry,
                                sensor_channel_id_t id,
                                sensor_channel_t** out_channel);
 esp_err_t pipeline_deinit(void);
+
+#ifdef __cplusplus
+}
+#endif
