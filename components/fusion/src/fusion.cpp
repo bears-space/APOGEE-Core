@@ -22,6 +22,8 @@ void fusionProcess(void* pvParameters) {
 
         if (xQueueReceive(queue, &measurement, portMAX_DELAY) == pdPASS) {
             // log the measurement data for debugging
+            
+            /*
             ESP_LOGI(TAG, "[IMU Consumer] Received measurement: Accel: [%.2f, %.2f, %.2f], Gyro: [%.2f, %.2f, %.2f], Temp: %.2f",
                      measurement.data.imu_low_g.xAcc,
                      measurement.data.imu_low_g.yAcc,
@@ -30,6 +32,7 @@ void fusionProcess(void* pvParameters) {
                      measurement.data.imu_low_g.yRate,
                      measurement.data.imu_low_g.zRate,
                      measurement.data.imu_low_g.temperature);
+            */
         }
 
         //delay task
