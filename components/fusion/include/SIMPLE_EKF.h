@@ -12,8 +12,9 @@ struct SimpleEKFConfig {
     float gamma_coef = 1.0f;  // Atmospheric model gamma coefficient
     float sigma_mp = 0.01f;   // Model noise: pressure standard deviation
     float sigma_mz =
-        0.01f;         // Model noise: z-axis acceleration standard deviation
-    float Dt = 0.01f;  // Expected filter time step in seconds
+        0.01f;          // Model noise: z-axis acceleration standard deviation
+    float Dt = 0.01f;   // Expected filter time step in seconds
+    float r_p = 0.01f;  // Barometer PSD
 };
 
 /**
@@ -49,6 +50,6 @@ class SimpleEKF : public ekf {
      */
     dspm::Mat StateXdot(dspm::Mat& x, float* u) override;
 
-   private:
+   public:
     SimpleEKFConfig config_;
 };
