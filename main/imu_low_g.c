@@ -122,6 +122,12 @@ bool imu_low_g_read(float* xAcc, float* yAcc, float* zAcc, float* xRate,
 }
 
 static void imu_low_g_task(void* arg) {
+    if (!imu_low_g_init()) {
+        ESP_LOGE(TAG, "Failed to initialize IMU");
+        vTaskDelete(NULL);
+        return;
+    }
+
     int count = 0;
 
     float imu_low_g_xAcc = 0;
@@ -190,11 +196,6 @@ static void imu_low_g_task(void* arg) {
 }
 
 esp_err_t imu_low_g_sensor_init(void) {
-    if (!imu_low_g_init()) {
-        ESP_LOGE(TAG, "Failed to initialize IMU");
-        return ESP_FAIL;
-    }
-
     // create a config for the example sensor channel we want to create
     static const sensor_channel_config_t example_config = {
         .id = 2,  // channel id, must be unique for each channel

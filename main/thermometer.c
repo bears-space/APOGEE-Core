@@ -6,14 +6,9 @@
 
 static const char* TAG = "thermometer";
 
-int count = 0;
-
-float thermometer_humidity = 0.0;
-float thermometer_temperature = 0.0;
-
 static WE_sensorInterface_t hids;
 
-void thermometer_init(void) {
+bool thermometer_init(void) {
     // TODO optimize initialization routine
     HIDS_Get_Default_Interface(&hids);
     hids.interfaceType = WE_i2c;
@@ -23,6 +18,7 @@ void thermometer_init(void) {
     while (WE_SUCCESS != WE_isSensorInterfaceReady(&hids)) {
     }
     ESP_LOGI(TAG, "Initialization successful");
+    return true;
 }
 
 bool thermometer_read(float* temperature, float* humidity) {
@@ -42,6 +38,17 @@ bool thermometer_read(float* temperature, float* humidity) {
 
 
 static void thermometer_task(void* arg) {
+    if (!thermometer_init()) {
+        ESP_LOGE(TAG, "Failed to initialize thermometer sensor");
+        vTaskDelete(NULL);
+        return;
+    }
+
+    int count = 0;
+
+    float thermometer_humidity = 0.0;
+    float thermometer_temperature = 0.0;
+
     TickType_t last_wake_time = xTaskGetTickCount();
     sensor_channel_t* channel = arg;
 
@@ -94,8 +101,6 @@ static void thermometer_task(void* arg) {
 }
 
 esp_err_t thermometer_sensor_init(void) {
-    thermometer_init();
-
     // create a config for the example sensor channel we want to create
     static const sensor_channel_config_t example_config = {
         .id = 1,  // channel id, must be unique for each channel
