@@ -30,8 +30,6 @@ void app_main(void) {
     ESP_ERROR_CHECK(imu_low_g_sensor_init());
     ESP_ERROR_CHECK(barometer_sensor_init());
 
-    ESP_LOGI(TAG, "All sensors initialized");
-
     ESP_LOGI(TAG, "Initializing fusion task...");
     ESP_ERROR_CHECK(fusionInit());
 

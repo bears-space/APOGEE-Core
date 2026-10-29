@@ -83,6 +83,15 @@ static void thermometer_task(void* arg) {
             ESP_LOGE(TAG, "Thermometer read failed");
         }
 
+        if((uxQueueSpacesAvailable(channel->queue) == 0)) {
+            // remove the oldest measurement from the queue to make space for the new one
+            sensor_measurement_t dropped_measurement;
+            if (xQueueReceive(channel->queue, &dropped_measurement, 0) == pdPASS) {
+                channel->dropped_measurements++;
+                ESP_LOGW(TAG, "Dropped oldest measurement, total dropped: %lu",
+                         (unsigned long)channel->dropped_measurements);
+            }
+        }
         esp_err_t err = pipeline_submit_measurement(channel, &measurement, 0);
 
         if (err == ESP_ERR_TIMEOUT) {
