@@ -33,7 +33,7 @@ void fusionProcess(void* pvParameters) {
         }
 
         //delay task
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Adjust the delay as needed
+        vTaskDelay(pdMS_TO_TICKS(1000/200)); // Adjust the delay as needed
     }
 }
 
