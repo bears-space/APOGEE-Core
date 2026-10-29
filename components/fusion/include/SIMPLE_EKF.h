@@ -8,9 +8,9 @@
  * @brief Configuration parameters for SimpleEKF
  */
 struct SimpleEKFConfig {
-    float beta_coef = 0.0f;   // Atmospheric model beta coefficient
-    float gamma_coef = 1.0f;  // Atmospheric model gamma coefficient
-    float sigma_mp = 0.01f;   // Model noise: pressure standard deviation
+    float beta_coef = 0.19025f;   // Atmospheric model beta coefficient
+    float gamma_coef = -941.21f;  // Atmospheric model gamma coefficient
+    float sigma_mp = 0.01f;       // Model noise: pressure standard deviation
     float sigma_mz =
         0.01f;          // Model noise: z-axis acceleration standard deviation
     float Dt = 0.01f;   // Expected filter time step in seconds
