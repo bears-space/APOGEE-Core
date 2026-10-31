@@ -10,5 +10,4 @@
 #include "platform.h"
 #include "vigilant.h"
 
-void thermometer_init(void);
-bool thermometer_read(float* temperature, float* humidity);
+esp_err_t thermometer_sensor_init(void);

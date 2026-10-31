@@ -10,6 +10,4 @@
 #include "platform.h"
 #include "vigilant.h"
 
-bool barometer_init(void);
-bool barometer_read_pressure(float* pressure);
-bool barometer_read_temperature(float* temperature);
+esp_err_t barometer_sensor_init(void);

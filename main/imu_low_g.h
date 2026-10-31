@@ -10,6 +10,5 @@
 #include "platform.h"
 #include "vigilant.h"
 
-bool imu_low_g_init(void);
-bool imu_low_g_read(float* xAcc, float* yAcc, float* zAcc, float* xRate,
-                    float* yRate, float* zRate, float* temperature);
+
+esp_err_t imu_low_g_sensor_init(void);
