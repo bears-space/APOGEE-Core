@@ -4,29 +4,27 @@
 #include "esp_log.h"
 #include "telemetry.h"
 
+static const float EKF_freq = 200.0f;  // Hz
 static const char* TAG = "fusion";
 
-void ekf_step(SimpleEKF ekf, float p, float dt) {
-    // The control inputs are null in this model
-    float u[3] = {0.0f, 0.0f, 0.0f};
-
-    // Observation matrix
-    dspm::Mat H(1, 3);
-    H *= 0;
-
-    H(0, 2) = 1.0f;
-
-    // Nose vector covariance
-    float R = ekf.config_.r_p / ekf.config_.Dt;
-
+void ekf_predict(SimpleEKF ekf, float dt) {
     // Prediction step
-    ekf.Process(u, dt);
+    ekf.Process(nullptr, dt);
+}
+void ekf_correct(SimpleEKF ekf, float dd_z, float dt) {
+    // Observation matrix
+    dspm::Mat H(1, 4);
+    H *= 0;
+    H(0, 3) = 1.0f;
 
-    float predicted[3] = {ekf.X(0, 0), ekf.X(1, 0), ekf.X(2, 0)};
-    float measured[3] = {0.0f, 0.0f, p};
+    // Measurement noise vector covariance
+    float R = ekf.config_.r_z / dt;
+
+    float predicted[4] = {ekf.X(0, 0), ekf.X(1, 0), ekf.X(2, 0), ekf.X(3, 0)};
+    float measured = dd_z;
 
     // Correction step
-    ekf.Update(H, measured, predicted, &R);
+    ekf.Update(H, &measured, predicted, &R);
 }
 
 void fusionProcess(void* pvParameters) {
@@ -42,10 +40,13 @@ void fusionProcess(void* pvParameters) {
 
     SimpleEKF simple_ekf;
     simple_ekf.Init();
+    ESP_LOGE(TAG, "EKF initiated.");
 
     uint64_t last_timestamp = 0;
 
     while (1) {
+        ekf_predict(simple_ekf, 1 / EKF_freq);
+
         sensor_measurement_t measurement;
         QueueHandle_t queue = imu_channel->queue;
 
@@ -63,11 +64,16 @@ void fusionProcess(void* pvParameters) {
                      measurement.data.imu_low_g.temperature);
         }
         float dt = (measurement.timestamp_us - last_timestamp) / 1e6f;
-        // FIX: Add barometer measurement
-        ekf_step(simple_ekf, measurement.baro.p, dt);
-
+        last_timestamp = measurement.timestamp_us;
+        ekf_correct(simple_ekf, measurement.data.imu_low_g.zAcc, dt);
+        ESP_LOGI(TAG,
+                 "[IMU Consumer]: EKF state: altitude = %.2f m, vertical speed "
+                 "= %.2f m/s, acceleration = %.2f m/s^2, pressure = %.2f hPa.",
+                 simple_ekf.X(0, 0), simple_ekf.X(1, 0), simple_ekf.X(2, 0),
+                 simple_ekf.X(3, 0) * 100.0f);
         // delay task
-        vTaskDelay(pdMS_TO_TICKS(1000));  // Adjust the delay as needed
+        vTaskDelay(pdMS_TO_TICKS(
+            1 / (1000 * EKF_freq)));  // Adjust the delay as needed
     }
 }
 

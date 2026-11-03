@@ -233,7 +233,7 @@ esp_err_t i2c_write_regs(VigilantI2CDevice* device, uint8_t reg,
 
     i2c_master_transmit_multi_buffer_info_t buffers[2] = {
         {.write_buffer = &reg, .buffer_size = 1},
-        {.write_buffer = data, .buffer_size = len},
+        {.write_buffer = (uint8_t*)data, .buffer_size = len},
     };
     size_t buffer_count = (len > 0) ? 2 : 1;
 

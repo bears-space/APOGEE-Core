@@ -12,9 +12,10 @@ struct SimpleEKFConfig {
     float gamma_coef = -941.21f;  // Atmospheric model gamma coefficient
     float sigma_mp = 0.01f;       // Model noise: pressure standard deviation
     float sigma_mz =
-        0.01f;          // Model noise: z-axis acceleration standard deviation
-    float Dt = 0.01f;   // Expected filter time step in seconds
-    float r_p = 0.01f;  // Barometer PSD
+        0.01f;  // Model noise: z-axis acceleration standard deviation
+    float Dt = 1 / 200.0f;  // Expected filter time step in seconds
+    float r_p = 0.01f;      // Barometer PSD
+    float r_z = 0.01f;      // Barometer PSD
 };
 
 /**
