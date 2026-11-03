@@ -4,7 +4,7 @@
 #include "esp_log.h"
 #include "telemetry.h"
 
-static const float EKF_freq = 200.0f;  // Hz
+static const float EKF_freq = 1.0f;  // Hz
 static const char* TAG = "fusion";
 
 void ekf_predict(SimpleEKF ekf, float dt) {
@@ -40,7 +40,7 @@ void fusionProcess(void* pvParameters) {
 
     SimpleEKF simple_ekf;
     simple_ekf.Init();
-    ESP_LOGE(TAG, "EKF initiated.");
+    ESP_LOGI(TAG, "EKF initiated.");
 
     uint64_t last_timestamp = 0;
 
@@ -97,7 +97,7 @@ esp_err_t fusionInit(void) {
     }
 
     BaseType_t result =
-        xTaskCreate(fusionProcess, TAG, 2048, out_channel, 5, NULL);
+        xTaskCreate(fusionProcess, TAG, 6144, out_channel, 5, NULL);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create fusion task");
