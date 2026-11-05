@@ -1,4 +1,5 @@
 #include "thermometer.h"
+
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -40,7 +41,6 @@ bool thermometer_read(float* temperature, float* humidity) {
     }
 }
 
-
 static void thermometer_task(void* arg) {
     TickType_t last_wake_time = xTaskGetTickCount();
     sensor_channel_t* channel = arg;
@@ -53,20 +53,23 @@ static void thermometer_task(void* arg) {
         return;
     }
     ESP_LOGI(TAG, "%d: Thermometer sensor task running, channel: %s", count++,
-        channel->config->name);
-    while (true) { // the main loop for gathering and submitting sensor data
+             channel->config->name);
+    while (true) {  // the main loop for gathering and submitting sensor data
 
-        bool success = thermometer_read(&thermometer_temperature, &thermometer_humidity);
+        bool success =
+            thermometer_read(&thermometer_temperature, &thermometer_humidity);
 
         // write to queue to simulate a measurement being sent
         sensor_measurement_t measurement = {
             .timestamp_us = (uint64_t)esp_timer_get_time(),
-            .data = {
-                .thermometer = {
-                    .temperature_c = thermometer_temperature,
-                    .humidity_percent = thermometer_humidity,
+            .data =
+                {
+                    .thermometer =
+                        {
+                            .temperature_c = thermometer_temperature,
+                            .humidity_percent = thermometer_humidity,
+                        },
                 },
-            },
             .flags = MEASUREMENT_VALID,
         };
 
@@ -88,7 +91,7 @@ static void thermometer_task(void* arg) {
         xTaskDelayUntil(
             &last_wake_time,
             pdMS_TO_TICKS(1000)  // THIS MUST BE COMPLIANT WITH
-                                // CONFIG_FREERTOS_HZ AND nominal_period_us
+                                 // CONFIG_FREERTOS_HZ AND nominal_period_us
         );
     }
 }
@@ -123,7 +126,8 @@ esp_err_t thermometer_sensor_init(void) {
     }
 
     // start a FreeRTOS task for the example sensor channel
-    BaseType_t result = xTaskCreate(thermometer_task, TAG, 2048, channel, 5, NULL);
+    BaseType_t result =
+        xTaskCreate(thermometer_task, TAG, 4096, channel, 5, NULL);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create example task");

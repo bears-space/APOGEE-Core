@@ -4,27 +4,27 @@
 #include "esp_log.h"
 #include "telemetry.h"
 
-static const float EKF_freq = 1.0f;  // Hz
+static const float EKF_freq = 200.0f;  // Hz
 static const char* TAG = "fusion";
 
-void ekf_predict(SimpleEKF ekf, float dt) {
+void ekf_predict(SimpleEKF& ekf, float dt) {
     // Prediction step
     ekf.Process(nullptr, dt);
 }
-void ekf_correct(SimpleEKF ekf, float dd_z, float dt) {
+void ekf_correct(SimpleEKF& ekf, float dd_z, float dt) {
     // Observation matrix
     dspm::Mat H(1, 4);
     H *= 0;
-    H(0, 3) = 1.0f;
+    H(0, 2) = 1.0f;
 
     // Measurement noise vector covariance
     float R = ekf.config_.r_z / dt;
 
-    float predicted[4] = {ekf.X(0, 0), ekf.X(1, 0), ekf.X(2, 0), ekf.X(3, 0)};
+    float predicted = ekf.X(2, 0);
     float measured = dd_z;
 
     // Correction step
-    ekf.Update(H, &measured, predicted, &R);
+    ekf.Update(H, &measured, &predicted, &R);
 }
 
 void fusionProcess(void* pvParameters) {
@@ -40,18 +40,27 @@ void fusionProcess(void* pvParameters) {
 
     SimpleEKF simple_ekf;
     simple_ekf.Init();
-    ESP_LOGI(TAG, "EKF initiated.");
+    ESP_LOGI(TAG, "[IMU Consumer] EKF initiated.");
 
     uint64_t last_timestamp = 0;
 
     while (1) {
-        ekf_predict(simple_ekf, 1 / EKF_freq);
-
         sensor_measurement_t measurement;
         QueueHandle_t queue = imu_channel->queue;
 
         if (xQueueReceive(queue, &measurement, portMAX_DELAY) == pdPASS) {
             // log the measurement data for debugging
+            float dt;
+            if (last_timestamp == 0) {
+                dt = 1.0f / EKF_freq;
+            } else {
+                dt = (measurement.timestamp_us - last_timestamp) / 1e6f;
+            }
+            // prevent dt from being to small or big
+            if (dt <= 0.0f || dt > 1.0f) {
+                dt = 1.0f / EKF_freq;
+            }
+            last_timestamp = measurement.timestamp_us;
             ESP_LOGI(TAG,
                      "[IMU Consumer] Received measurement: Accel: [%.2f, %.2f, "
                      "%.2f], Gyro: [%.2f, %.2f, %.2f], Temp: %.2f",
@@ -62,18 +71,17 @@ void fusionProcess(void* pvParameters) {
                      measurement.data.imu_low_g.yRate,
                      measurement.data.imu_low_g.zRate,
                      measurement.data.imu_low_g.temperature);
+            ekf_predict(simple_ekf, dt);
+            float z_acc = (measurement.data.imu_low_g.zAcc / 1000.0f - 1.0f) *
+                          9.80665f;  // Convert from mg to m/s^2
+            ekf_correct(simple_ekf, z_acc, dt);
+            ESP_LOGI(
+                TAG,
+                "[IMU Consumer]: EKF state: altitude = %.2f m, vertical speed "
+                "= %.2f m/s, acceleration = %.2f m/s^2, pressure = %.2f hPa.",
+                simple_ekf.X(0, 0), simple_ekf.X(1, 0), simple_ekf.X(2, 0),
+                simple_ekf.X(3, 0) / 100.0f);
         }
-        float dt = (measurement.timestamp_us - last_timestamp) / 1e6f;
-        last_timestamp = measurement.timestamp_us;
-        ekf_correct(simple_ekf, measurement.data.imu_low_g.zAcc, dt);
-        ESP_LOGI(TAG,
-                 "[IMU Consumer]: EKF state: altitude = %.2f m, vertical speed "
-                 "= %.2f m/s, acceleration = %.2f m/s^2, pressure = %.2f hPa.",
-                 simple_ekf.X(0, 0), simple_ekf.X(1, 0), simple_ekf.X(2, 0),
-                 simple_ekf.X(3, 0) * 100.0f);
-        // delay task
-        vTaskDelay(pdMS_TO_TICKS(
-            1 / (1000 * EKF_freq)));  // Adjust the delay as needed
     }
 }
 
@@ -97,7 +105,7 @@ esp_err_t fusionInit(void) {
     }
 
     BaseType_t result =
-        xTaskCreate(fusionProcess, TAG, 6144, out_channel, 5, NULL);
+        xTaskCreate(fusionProcess, TAG, 8192, out_channel, 5, NULL);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create fusion task");

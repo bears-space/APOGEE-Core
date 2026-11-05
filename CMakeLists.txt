@@ -26,7 +26,7 @@ idf_build_set_property(VE_RECOVERY_HTML "${VE_RECOVERY_HTML}")
 project(vigilant-engine)
 
 idf_build_get_property(VE_BUILD_DIR BUILD_DIR)
-idf_build_get_property(VE_PROJECT_BIN PROJECT_BIN)
+set(VE_PROJECT_BIN "${PROJECT_NAME}.bin")
 idf_build_get_property(VE_PYTHON PYTHON)
 idf_build_get_property(VE_IDF_TARGET IDF_TARGET)
 idf_build_get_property(VE_IDF_PATH IDF_PATH)

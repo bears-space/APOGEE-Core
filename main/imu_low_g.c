@@ -1,4 +1,5 @@
 #include "imu_low_g.h"
+
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -143,27 +144,29 @@ static void imu_low_g_task(void* arg) {
         return;
     }
     ESP_LOGI(TAG, "%d: LOW-G IMU sensor task running, channel: %s", count++,
-        channel->config->name);
-    while (true) { // the main loop for gathering and submitting sensor data
+             channel->config->name);
+    while (true) {  // the main loop for gathering and submitting sensor data
 
-        bool success = imu_low_g_read(&imu_low_g_xAcc, &imu_low_g_yAcc, &imu_low_g_zAcc,
-                       &imu_low_g_xRate, &imu_low_g_yRate, &imu_low_g_zRate,
-                       &imu_low_g_temperature);
+        bool success = imu_low_g_read(
+            &imu_low_g_xAcc, &imu_low_g_yAcc, &imu_low_g_zAcc, &imu_low_g_xRate,
+            &imu_low_g_yRate, &imu_low_g_zRate, &imu_low_g_temperature);
 
         // write to queue to simulate a measurement being sent
         sensor_measurement_t measurement = {
             .timestamp_us = (uint64_t)esp_timer_get_time(),
-            .data = {
-                .imu_low_g = {
-                    .xAcc = imu_low_g_xAcc,
-                    .yAcc = imu_low_g_yAcc,
-                    .zAcc = imu_low_g_zAcc,
-                    .xRate = imu_low_g_xRate,
-                    .yRate = imu_low_g_yRate,
-                    .zRate = imu_low_g_zRate,
-                    .temperature = imu_low_g_temperature,
+            .data =
+                {
+                    .imu_low_g =
+                        {
+                            .xAcc = imu_low_g_xAcc,
+                            .yAcc = imu_low_g_yAcc,
+                            .zAcc = imu_low_g_zAcc,
+                            .xRate = imu_low_g_xRate,
+                            .yRate = imu_low_g_yRate,
+                            .zRate = imu_low_g_zRate,
+                            .temperature = imu_low_g_temperature,
+                        },
                 },
-            },
             .flags = MEASUREMENT_VALID,
         };
 
@@ -184,8 +187,7 @@ static void imu_low_g_task(void* arg) {
 
         xTaskDelayUntil(
             &last_wake_time,
-            pdMS_TO_TICKS(channel->config->nominal_period_us / 1000)
-        );
+            pdMS_TO_TICKS(channel->config->nominal_period_us / 1000));
     }
 }
 
@@ -213,7 +215,8 @@ esp_err_t imu_low_g_sensor_init(void) {
     // now we can find the channel we just created and start a task for it
     sensor_channel_t* channel = NULL;
 
-    err = sensor_registry_find(get_sensor_registry(), example_config.id, &channel);
+    err = sensor_registry_find(get_sensor_registry(), example_config.id,
+                               &channel);
 
     if (err != ESP_OK || channel == NULL) {
         ESP_LOGE(TAG, "Failed to find channel: %s", esp_err_to_name(err));
@@ -222,7 +225,8 @@ esp_err_t imu_low_g_sensor_init(void) {
     }
 
     // start a FreeRTOS task for the example sensor channel
-    BaseType_t result = xTaskCreate(imu_low_g_task, TAG, 2048, channel, 5, NULL);
+    BaseType_t result =
+        xTaskCreate(imu_low_g_task, TAG, 4096, channel, 5, NULL);
 
     if (result != pdPASS) {
         ESP_LOGE(TAG, "Failed to create IMU task");

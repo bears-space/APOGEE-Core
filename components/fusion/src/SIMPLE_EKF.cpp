@@ -5,7 +5,7 @@
 #include "ekf.h"
 
 SimpleEKF::SimpleEKF(const SimpleEKFConfig& config)
-    : ekf(4, 0), config_(config) {}
+    : ekf(4, 4), config_(config) {}
 
 void SimpleEKF::Init() {
     // Initial state is null
@@ -14,6 +14,7 @@ void SimpleEKF::Init() {
 
     // Initial filter covariance matrix
     P = dspm::Mat::eye(NUMX);
+    G = dspm::Mat::eye(NUMW);
 
     // Model noise covariance matrix
     Q *= 0;
@@ -35,10 +36,9 @@ void SimpleEKF::LinearizeFG(dspm::Mat& x, float* u) {
 
     F(0, 1) = 1.0f;
     F(1, 2) = 1.0f;
-    F(2, 1) = std::pow(x(2, 0), 1.0f - config_.beta_coef) / config_.gamma_coef *
-              config_.Dt;
-    F(2, 2) = 1.0f + (1.0f - config_.beta_coef) / config_.gamma_coef * x(2, 0) *
-                         std::pow(x(2, 0), -config_.beta_coef) * config_.Dt;
+    F(3, 1) = std::pow(x(3, 0), 1.0f - config_.beta_coef) / config_.gamma_coef;
+    F(3, 3) = (1.0f - config_.beta_coef) / config_.gamma_coef * x(1, 0) *
+              std::pow(x(3, 0), -config_.beta_coef);
 }
 
 dspm::Mat SimpleEKF::StateXdot(dspm::Mat& x, float* u) {
