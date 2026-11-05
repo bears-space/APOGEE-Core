@@ -77,7 +77,7 @@ void fusionProcess(void* pvParameters) {
             ekf_correct(simple_ekf, z_acc, dt);
             ESP_LOGI(
                 TAG,
-                "[IMU Consumer]: EKF state: altitude = %.2f m, vertical speed "
+                "[IMU Consumer] EKF state: altitude = %.2f m, vertical speed "
                 "= %.2f m/s, acceleration = %.2f m/s^2, pressure = %.2f hPa.",
                 simple_ekf.X(0, 0), simple_ekf.X(1, 0), simple_ekf.X(2, 0),
                 simple_ekf.X(3, 0) / 100.0f);

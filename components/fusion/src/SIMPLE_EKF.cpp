@@ -32,7 +32,6 @@ void SimpleEKF::Init() {
 void SimpleEKF::LinearizeFG(dspm::Mat& x, float* u) {
     // Continuous F
     F *= 0;
-    // G not required, i.e. not specified.
 
     F(0, 1) = 1.0f;
     F(1, 2) = 1.0f;
