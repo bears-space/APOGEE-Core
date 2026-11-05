@@ -40,7 +40,7 @@ void fusionProcess(void* pvParameters) {
 
     SimpleEKF simple_ekf;
     simple_ekf.Init();
-    ESP_LOGI(TAG, "[IMU Consumer] EKF initiated.");
+    ESP_LOGI(TAG, "[EKF] EKF initiated.");
 
     uint64_t last_timestamp = 0;
 
@@ -63,24 +63,32 @@ void fusionProcess(void* pvParameters) {
             last_timestamp = measurement.timestamp_us;
             ESP_LOGI(TAG,
                      "[IMU Consumer] Received measurement: Accel: [%.2f, %.2f, "
-                     "%.2f], Gyro: [%.2f, %.2f, %.2f], Temp: %.2f",
+                     "%.2f], Gyro: [%.2f, %.2f, %.2f], Temp: %.2f, Time: %f.",
                      measurement.data.imu_low_g.xAcc,
                      measurement.data.imu_low_g.yAcc,
                      measurement.data.imu_low_g.zAcc,
                      measurement.data.imu_low_g.xRate,
                      measurement.data.imu_low_g.yRate,
                      measurement.data.imu_low_g.zRate,
-                     measurement.data.imu_low_g.temperature);
+                     measurement.data.imu_low_g.temperature,
+                     measurement.timestamp_us / 1e6f);
             ekf_predict(simple_ekf, dt);
             float z_acc = (measurement.data.imu_low_g.zAcc / 1000.0f - 1.0f) *
                           9.80665f;  // Convert from mg to m/s^2
             ekf_correct(simple_ekf, z_acc, dt);
             ESP_LOGI(
                 TAG,
-                "[IMU Consumer] EKF state: altitude = %.2f m, vertical speed "
-                "= %.2f m/s, acceleration = %.2f m/s^2, pressure = %.2f hPa.",
+                "[EKF] Log: alt = %.2f m, v/s "
+                "= %.2f m/s, acc = %.2f m/s^2, press = %.2f hPa, time = %.2f.",
                 simple_ekf.X(0, 0), simple_ekf.X(1, 0), simple_ekf.X(2, 0),
-                simple_ekf.X(3, 0) / 100.0f);
+                simple_ekf.X(3, 0) / 100.0f, last_timestamp / 1e6f);
+            ESP_LOGI(TAG,
+                     "[EKF] Performance: dd_z_meas = %f m/s^2, dd_z_kalman: %f "
+                     "m/s^2, "
+                     "residual: "
+                     "%f m/s^2, time: %f s.",
+                     z_acc, simple_ekf.X(2, 0), z_acc - simple_ekf.X(2, 0),
+                     last_timestamp / 1e6f);
         }
     }
 }
