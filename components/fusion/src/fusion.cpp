@@ -15,14 +15,14 @@ static const char* TAG = "fusion";
 
 constexpr float mg2SI(float mg) { return (mg / 1000.0f - 1) * 9.80665f; }
 
-constexpr void ekf_logPerf(float meas, float kal, float cov, float dt) {
+constexpr void ekf_logPerf(float meas, float kal, float cov, float tstmp) {
     ESP_LOGI(TAG, "[EKF] Performance (@ %f s): meas = %f, kal = %f, cov = %f,",
-             dt, meas, kal, cov);
+             tstmp, meas, kal, cov);
 }
 
-constexpr void ekf_logState(SimpleEKF& ekf, float dt) {
-    std::string mess = std::format("[EKF] State (@ {} s): ", dt);
-    for (int i = 0; i < ekf.NUMX - 1; i++) {
+constexpr void ekf_logState(SimpleEKF& ekf, float tstmp) {
+    std::string mess = std::format("[EKF] State (@ {} s): ", tstmp);
+    for (int i = 0; i < ekf.NUMX; i++) {
         mess += std::format("state {} = {}, ", i, ekf.X(i, 0));
     }
     ESP_LOGI(TAG, "%s", mess.c_str());
@@ -98,7 +98,7 @@ void fusionProcess(void* pvParameters) {
                 measurement.data.imu_low_g.zAcc);  // Convert from mg to m/s^2
             ekf_correct(simple_ekf, z_acc, dt);
 
-            ekf_logState(simple_ekf, dt);
+            ekf_logState(simple_ekf, last_timestamp / 1e6f);
             ekf_logPerf(z_acc, simple_ekf.X(2, 0), simple_ekf.P(2, 2),
                         last_timestamp / 1e6f);
         }
