@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cmath>
-
 #include "ekf.h"
 
 /**
@@ -10,12 +8,11 @@
 struct SimpleEKFConfig {
     float beta_coef = 0.19025f;   // Atmospheric model beta coefficient
     float gamma_coef = -941.21f;  // Atmospheric model gamma coefficient
-    float sigma_mp = 0.01f;       // Model noise: pressure standard deviation
-    float sigma_mz =
-        0.01f;  // Model noise: z-axis acceleration standard deviation
-    float Dt = 1 / 200.0f;  // Expected filter time step in seconds
-    float r_p = 0.01f;      // Barometer PSD
-    float r_z = 0.01f;      // Barometer PSD
+    float sigma_mp = 0.01f;       // Pa: pressure std-dev
+    float sigma_mz = 0.01f;       // m/s^2: z-axis acceleration std-dev
+    float Dt = 0.1f;              // s: Expected filter time step
+    float S_p = 0.01f;            // Pa^2/Hz: barometer PSD
+    float S_z = 5.80e-5f;         // (m/s^2)^2/Hz: z-axis accelerometer PSD
 };
 
 /**

@@ -1,11 +1,32 @@
 #include "fusion.h"
 
+#include <stdint.h>
+
+#include <format>
+#include <string>
+
 #include "SIMPLE_EKF.h"
 #include "esp_log.h"
 #include "telemetry.h"
 
-static const float EKF_freq = 200.0f;  // Hz
+static const float EKF_freq = 10.0f;  // Hz
+static const float g0 = 9.80665;      // m/s^2
 static const char* TAG = "fusion";
+
+constexpr float mg2SI(float mg) { return (mg / 1000.0f - 1) * 9.80665f; }
+
+constexpr void ekf_logPerf(float meas, float kal, float cov, float dt) {
+    ESP_LOGI(TAG, "[EKF] Performance (@ %f s): meas = %f, kal = %f, cov = %f,",
+             dt, meas, kal, cov);
+}
+
+constexpr void ekf_logState(SimpleEKF& ekf, float dt) {
+    std::string mess = std::format("[EKF] State (@ {} s): ", dt);
+    for (int i = 0; i < ekf.NUMX - 1; i++) {
+        mess += std::format("state {} = {}, ", i, ekf.X(i, 0));
+    }
+    ESP_LOGI(TAG, "%s", mess.c_str());
+}
 
 void ekf_predict(SimpleEKF& ekf, float dt) {
     // Prediction step
@@ -18,7 +39,7 @@ void ekf_correct(SimpleEKF& ekf, float dd_z, float dt) {
     H(0, 2) = 1.0f;
 
     // Measurement noise vector covariance
-    float R = ekf.config_.r_z / dt;
+    float R = ekf.config_.S_z / dt;
 
     float predicted = ekf.X(2, 0);
     float measured = dd_z;
@@ -50,13 +71,11 @@ void fusionProcess(void* pvParameters) {
 
         if (xQueueReceive(queue, &measurement, portMAX_DELAY) == pdPASS) {
             // log the measurement data for debugging
-            float dt;
-            if (last_timestamp == 0) {
-                dt = 1.0f / EKF_freq;
-            } else {
+            float dt = 1.0f / EKF_freq;
+            if (last_timestamp != 0) {
                 dt = (measurement.timestamp_us - last_timestamp) / 1e6f;
             }
-            // prevent dt from being to small or big
+            // prevent dt from being too small or big
             if (dt <= 0.0f || dt > 1.0f) {
                 dt = 1.0f / EKF_freq;
             }
@@ -72,24 +91,16 @@ void fusionProcess(void* pvParameters) {
                      measurement.data.imu_low_g.zRate,
                      measurement.data.imu_low_g.temperature,
                      measurement.timestamp_us / 1e6f);
+
             ekf_predict(simple_ekf, dt);
-            float z_acc = (measurement.data.imu_low_g.zAcc / 1000.0f - 1.0f) *
-                          9.80665f;  // Convert from mg to m/s^2
+
+            float z_acc = mg2SI(
+                measurement.data.imu_low_g.zAcc);  // Convert from mg to m/s^2
             ekf_correct(simple_ekf, z_acc, dt);
-            ESP_LOGI(TAG,
-                     "[EKF] Log: alt = %.2f m, v/s "
-                     "= %.2f m/s, acc = %.2f m/s^2, press = %.2f hPa, time = "
-                     "%.2f s.",
-                     simple_ekf.X(0, 0), simple_ekf.X(1, 0), simple_ekf.X(2, 0),
-                     simple_ekf.X(3, 0) / 100.0f, last_timestamp / 1e6f);
-            ESP_LOGI(
-                TAG,
-                "[EKF] Performance: dd_z_meas = %f m/s^2, dd_z_kalman = %f "
-                "m/s^2, "
-                "residual = "
-                "%f m/s^2, time = %f s.",
-                z_acc, simple_ekf.X(2, 0), z_acc - simple_ekf.X(2, 0),
-                last_timestamp / 1e6f);
+
+            ekf_logState(simple_ekf, dt);
+            ekf_logPerf(z_acc, simple_ekf.X(2, 0), simple_ekf.P(2, 2),
+                        last_timestamp / 1e6f);
         }
     }
 }

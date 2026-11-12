@@ -4,6 +4,10 @@
 
 #include "ekf.h"
 
+constexpr float sqr(float x) { return x * x; }
+constexpr float cub(float x) { return x * x * x; }
+constexpr float tet(float x) { return x * x * x * x; }
+
 SimpleEKF::SimpleEKF(const SimpleEKFConfig& config)
     : ekf(4, 4), config_(config) {}
 
@@ -18,15 +22,12 @@ void SimpleEKF::Init() {
 
     // Model noise covariance matrix
     Q *= 0;
-    Q(0, 0) =
-        std::pow(config_.Dt, 4.0f) / 4.0f * std::pow(config_.sigma_mz, 2.0f);
-    Q(1, 0) =
-        std::pow(config_.Dt, 3.0f) / 2.0f * std::pow(config_.sigma_mz, 2.0f);
-    Q(0, 1) =
-        std::pow(config_.Dt, 3.0f) / 2.0f * std::pow(config_.sigma_mz, 2.0f);
-    Q(1, 1) = std::pow(config_.Dt, 2.0f) * std::pow(config_.sigma_mz, 2.0f);
-    Q(2, 2) = std::pow(config_.sigma_mz, 2.0f);
-    Q(3, 3) = std::pow(config_.sigma_mp, 2.0f);
+    Q(0, 0) = tet(config_.Dt) / 4.0f * sqr(config_.sigma_mz);
+    Q(1, 0) = cub(config_.Dt) / 2.0f * sqr(config_.sigma_mz);
+    Q(0, 1) = cub(config_.Dt) / 2.0f * sqr(config_.sigma_mz);
+    Q(1, 1) = sqr(config_.Dt) * sqr(config_.sigma_mz);
+    Q(2, 2) = sqr(config_.sigma_mz);
+    Q(3, 3) = sqr(config_.sigma_mp);
 }
 
 void SimpleEKF::LinearizeFG(dspm::Mat& x, float* u) {
